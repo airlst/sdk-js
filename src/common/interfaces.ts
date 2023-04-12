@@ -1,7 +1,7 @@
 export interface EventInterface {
   uuid: string
-  name: Object
-  extended_fields: Object
+  name: object
+  extended_fields: object
   locales: Array<LocaleInterface>
   default_locale: LocaleInterface
   additional_locales: Array<LocaleInterface>
@@ -22,7 +22,7 @@ export interface GuestInterface {
 }
 
 export interface BookingInterface {
-  extended_fields: Object
+  extended_fields: object
 }
 
 export interface ContactInterface {
@@ -31,5 +31,5 @@ export interface ContactInterface {
   first_name: string
   last_name: string
   email: string
-  extended_fields: Object
+  extended_fields: object
 }

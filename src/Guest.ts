@@ -46,7 +46,7 @@ export const Guest = class extends Api {
 
   public async update(
     code: string,
-    body: Object
+    body: object
   ): Promise<UpdateResponseInterface> {
     const response = await fetch(
       `${Api.BASE_URL}/events/${this.eventUuid}/guests/${code}`,

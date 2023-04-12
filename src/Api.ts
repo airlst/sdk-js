@@ -1,5 +1,5 @@
 export const Api = class {
-  public static BASE_URL: string = 'https://airlst.app/api'
+  public static BASE_URL = 'https://airlst.app/api'
   public static COMPANY_API_KEY: string
 
   public static setBaseURL(baseURL: string): void {
