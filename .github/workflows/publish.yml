@@ -1,7 +1,7 @@
 name: Publish package
 
 env:
-  NODE_TOKEN: ${{ secrets.NPM_TOKEN }}
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
 on:
   release:
