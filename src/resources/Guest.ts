@@ -1,11 +1,11 @@
-import { Api } from './Api'
-import { GuestInterface } from './common/interfaces'
+import { Api } from '../Api'
+import { GuestInterface } from '../interfaces'
 
 export const Guest = class {
   public eventId: string
 
-  constructor(eventUuid: string) {
-    this.eventId = eventUuid
+  constructor(eventId: string) {
+    this.eventId = eventId
   }
 
   public async validateCode(

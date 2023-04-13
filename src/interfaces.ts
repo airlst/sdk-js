@@ -8,7 +8,7 @@ export interface EventInterface {
   registration_type: string
 }
 
-export interface LocaleInterface {
+interface LocaleInterface {
   id: string
   code: string
   label: string
@@ -22,11 +22,11 @@ export interface GuestInterface {
   contact: ContactInterface
 }
 
-export interface BookingInterface {
+interface BookingInterface {
   extended_fields: object
 }
 
-export interface ContactInterface {
+interface ContactInterface {
   sex: string
   full_name: string
   first_name: string

@@ -1,5 +1,5 @@
 import { afterEach, test, expect, vi } from 'vitest'
-import { Api, Event } from '../src'
+import { Api, Event } from '../../src'
 
 const apiMock = (Api.sendRequest = vi.fn())
 

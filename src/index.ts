@@ -1,5 +1,5 @@
 import { Api } from './Api'
-import { Event } from './Event'
-import { Guest } from './Guest'
+import { Event } from './resources/Event'
+import { Guest } from './resources/Guest'
 
 export { Api, Event, Guest }

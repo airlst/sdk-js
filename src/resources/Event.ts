@@ -1,5 +1,5 @@
-import { Api } from './Api'
-import { EventInterface } from './common/interfaces'
+import { Api } from '../Api'
+import { EventInterface } from '../interfaces'
 
 export const Event = class {
   public async list(): Promise<ListResponseInterface> {
