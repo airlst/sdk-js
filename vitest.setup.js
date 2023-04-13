@@ -4,3 +4,4 @@ import { vi } from 'vitest'
 const fetchMocker = createFetchMock(vi);
 
 fetchMocker.enableMocks()
+fetchMocker.doMock()

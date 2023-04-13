@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "format": "prettier src --write",
+    "format": "prettier --write src tests",
     "lint": "eslint --ext .ts src",
     "test": "vitest",
     "check": "yarn run format && yarn run lint"

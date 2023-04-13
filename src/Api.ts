@@ -18,9 +18,15 @@ export const Api = class {
     }
   }
 
-  public static async sendRequest<T>(uri: string, options?: object): Promise<ResponseInterface> {
+  public static async sendRequest(
+    uri: string,
+    options?: RequestInit
+  ): Promise<ResponseInterface> {
     const response = await fetch(this.BASE_URL + uri, {
-      headers: Api.getRequestHeaders(),
+      headers: {
+        ...Api.getRequestHeaders(),
+        ...options?.headers,
+      },
       ...options,
     })
 
@@ -33,6 +39,6 @@ export const Api = class {
 }
 
 interface ResponseInterface {
-  data: any,
-  meta?: any,
+  data: any
+  meta?: any
 }
