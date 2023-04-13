@@ -18,15 +18,9 @@ export const Api = class {
     }
   }
 
-  public static async sendRequest(
-    uri: string,
-    options?: RequestInit
-  ): Promise<ResponseInterface> {
+  public static async sendRequest(uri: string,options?: RequestInit): Promise<ResponseInterface> {
     const response = await fetch(this.BASE_URL + uri, {
-      headers: {
-        ...Api.getRequestHeaders(),
-        ...options?.headers,
-      },
+      headers: {...Api.getRequestHeaders(), ...options?.headers},
       ...options,
     })
 
