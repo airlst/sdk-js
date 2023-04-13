@@ -9,6 +9,7 @@
     "dev": "tsc --watch",
     "format": "prettier src --write",
     "lint": "eslint --ext .ts src",
+    "test": "vitest",
     "check": "yarn run format && yarn run lint"
   },
   "devDependencies": {
@@ -17,6 +18,8 @@
     "eslint": "^8.38.0",
     "eslint-config-prettier": "^8.8.0",
     "prettier": "^2.8.7",
-    "typescript": "^5.0.4"
+    "typescript": "^5.0.4",
+    "vitest": "^0.30.1",
+    "vitest-fetch-mock": "^0.2.2"
   }
 }

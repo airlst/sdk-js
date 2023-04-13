@@ -12,9 +12,27 @@ export const Api = class {
 
   public static getRequestHeaders(): HeadersInit {
     return {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'X-Company-Api-Key': this.COMPANY_API_KEY,
+      'content-type': 'application/json',
+      accept: 'application/json',
+      'x-company-api-key': this.COMPANY_API_KEY,
     }
   }
+
+  public static async sendRequest<T>(uri: string, options?: object): Promise<ResponseInterface> {
+    const response = await fetch(this.BASE_URL + uri, {
+      headers: Api.getRequestHeaders(),
+      ...options,
+    })
+
+    if (!response.ok) {
+      throw response
+    }
+
+    return await response.json()
+  }
+}
+
+interface ResponseInterface {
+  data: any,
+  meta?: any,
 }
