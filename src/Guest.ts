@@ -2,17 +2,17 @@ import { Api } from './Api'
 import { GuestInterface } from './common/interfaces'
 
 export const Guest = class {
-  public eventUuid: string
+  public eventId: string
 
   constructor(eventUuid: string) {
-    this.eventUuid = eventUuid
+    this.eventId = eventUuid
   }
 
   public async validateCode(
     code: string
   ): Promise<ValidateCodeResponseInterface> {
     return await Api.sendRequest(
-      `/events/${this.eventUuid}/guests/validate-code`,
+      `/events/${this.eventId}/guests/validate-code`,
       {
         method: 'post',
         body: JSON.stringify({ code }),
@@ -21,14 +21,21 @@ export const Guest = class {
   }
 
   public async get(code: string): Promise<GetResponseInterface> {
-    return await Api.sendRequest(`/events/${this.eventUuid}/guests/${code}`)
+    return await Api.sendRequest(`/events/${this.eventId}/guests/${code}`)
+  }
+
+  public async create(body: object): Promise<CreateResponseInterface> {
+    return await Api.sendRequest(`/events/${this.eventId}/guests`, {
+      method: 'post',
+      body: JSON.stringify(body),
+    })
   }
 
   public async update(
     code: string,
     body: object
   ): Promise<UpdateResponseInterface> {
-    return await Api.sendRequest(`/events/${this.eventUuid}/guests/${code}`, {
+    return await Api.sendRequest(`/events/${this.eventId}/guests/${code}`, {
       method: 'put',
       body: JSON.stringify(body),
     })
@@ -42,6 +49,12 @@ interface ValidateCodeResponseInterface {
 }
 
 interface GetResponseInterface {
+  data: {
+    guest: GuestInterface
+  }
+}
+
+interface CreateResponseInterface {
   data: {
     guest: GuestInterface
   }

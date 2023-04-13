@@ -26,6 +26,16 @@ test('get()', async () => {
   expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/guest-code')
 })
 
+test('create()', async () => {
+  guest.create({ a: 'b' })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests', {
+    method: 'post',
+    body: '{"a":"b"}',
+  })
+})
+
 test('update()', async () => {
   guest.update('guest-code', { a: 'b' })
 
