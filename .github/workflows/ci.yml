@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
 on:
   pull_request:
     branches: [master]
