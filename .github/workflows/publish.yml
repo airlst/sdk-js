@@ -1,8 +1,5 @@
 name: Publish package
 
-env:
-  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
 on:
   release:
     types: [published]
@@ -27,5 +24,7 @@ jobs:
         run: yarn install
       - name: Build package
         run: yarn run build
+      - name: Set NPM token
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
       - name: Publish package
         run: npm publish --access public

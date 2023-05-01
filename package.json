@@ -11,6 +11,7 @@
   "bugs": {
     "url": "https://github.com/airlst/sdk-js/issues"
   },
+  "installation": "yarn add @airlst/sdk",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
