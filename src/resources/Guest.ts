@@ -24,7 +24,9 @@ export const Guest = class {
     return await Api.sendRequest(`/events/${this.eventId}/guests/${code}`)
   }
 
-  public async create(body: object): Promise<CreateResponseInterface> {
+  public async create(
+    body: CreateBodyInterface
+  ): Promise<CreateResponseInterface> {
     return await Api.sendRequest(`/events/${this.eventId}/guests`, {
       method: 'post',
       body: JSON.stringify(body),
@@ -33,7 +35,7 @@ export const Guest = class {
 
   public async update(
     code: string,
-    body: object
+    body: UpdateBodyInterface
   ): Promise<UpdateResponseInterface> {
     return await Api.sendRequest(`/events/${this.eventId}/guests/${code}`, {
       method: 'put',
@@ -60,8 +62,16 @@ interface CreateResponseInterface {
   }
 }
 
+interface CreateBodyInterface {
+  status: string
+}
+
 interface UpdateResponseInterface {
   data: {
     guest: GuestInterface
   }
+}
+
+interface UpdateBodyInterface {
+  status: string
 }
