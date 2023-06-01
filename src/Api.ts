@@ -1,20 +1,20 @@
 export const Api = class {
   public static BASE_URL = 'https://airlst.app/api'
-  public static COMPANY_API_KEY: string
+  public static API_KEY: string
 
   public static setBaseURL(baseURL: string): void {
     this.BASE_URL = baseURL
   }
 
-  public static setCompanyApiKey(companyApiKey: string): void {
-    this.COMPANY_API_KEY = companyApiKey
+  public static setApiKey(companyApiKey: string): void {
+    this.API_KEY = companyApiKey
   }
 
   public static getRequestHeaders(): HeadersInit {
     return {
       'content-type': 'application/json',
       accept: 'application/json',
-      'x-company-api-key': this.COMPANY_API_KEY,
+      'x-api-key': this.API_KEY,
     }
   }
 
