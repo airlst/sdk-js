@@ -10,25 +10,25 @@ test('setBaseURL()', () => {
 })
 
 test('setCompanyApiKey()', () => {
-  expect(Api.COMPANY_API_KEY).toBeUndefined()
+  expect(Api.API_KEY).toBeUndefined()
 
-  Api.setCompanyApiKey('abc')
+  Api.setApiKey('abc')
 
-  expect(Api.COMPANY_API_KEY).toBe('abc')
+  expect(Api.API_KEY).toBe('abc')
 })
 
 test('getRequestHeaders()', () => {
-  Api.setCompanyApiKey('abc')
+  Api.setApiKey('abc')
 
   expect(Api.getRequestHeaders()).toStrictEqual({
     'content-type': 'application/json',
     accept: 'application/json',
-    'x-company-api-key': 'abc',
+    'x-api-key': 'abc',
   })
 })
 
 test('sendRequest()', async () => {
-  Api.setCompanyApiKey('abc')
+  Api.setApiKey('abc')
 
   fetch.mockResponse(JSON.stringify({ data: { a: 'b' } }))
   const response = await Api.sendRequest('/whatever')
@@ -48,7 +48,7 @@ test('sendRequest()', async () => {
 })
 
 test('sendRequest() throws exception', async () => {
-  Api.setCompanyApiKey('abc')
+  Api.setApiKey('abc')
 
   fetch.mockResponse('{}', { status: 400, ok: false })
 
