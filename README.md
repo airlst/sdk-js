@@ -8,12 +8,12 @@ yarn add @airlst/sdk
 
 ## Usage
 
-Set Company API key
+Set API key
 
 ```javascript
 import { Api } from '@airlst/sdk'
 
-Api.setCompanyApiKey('YOUR_COMPANY_API_KEY')
+Api.setApiKey('YOUR_API_KEY')
 ```
 
 ## Methods
@@ -23,6 +23,8 @@ Currently available methods:
 ### Event methods
 
 #### Get all company events
+
+> **Important:** This method requires that API key must be company bound!
 
 ```javascript
 import { Event } from '@airlst/sdk'
