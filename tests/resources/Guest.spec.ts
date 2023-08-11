@@ -15,7 +15,7 @@ test('validateCode()', async () => {
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
     '/events/event-uuid/guests/validate-code',
-    { method: 'post', body: '{"code":"guest-code"}' }
+    { method: 'post', body: '{"code":"guest-code"}' },
   )
 })
 
@@ -34,6 +34,19 @@ test('create()', async () => {
     method: 'post',
     body: '{"a":"b"}',
   })
+})
+
+test('createCompanion()', async () => {
+  guest.createCompanion('guest-code', { a: 'b' })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/companions',
+    {
+      method: 'post',
+      body: '{"a":"b"}',
+    },
+  )
 })
 
 test('update()', async () => {

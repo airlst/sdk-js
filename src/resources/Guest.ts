@@ -1,5 +1,9 @@
 import { Api } from '../Api'
-import { GuestInterface } from '../interfaces'
+import {
+  GuestInterface,
+  BookingInterface,
+  ContactInterface,
+} from '../interfaces'
 
 export const Guest = class {
   public eventId: string
@@ -9,14 +13,14 @@ export const Guest = class {
   }
 
   public async validateCode(
-    code: string
+    code: string,
   ): Promise<ValidateCodeResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guests/validate-code`,
       {
         method: 'post',
         body: JSON.stringify({ code }),
-      }
+      },
     )
   }
 
@@ -25,7 +29,7 @@ export const Guest = class {
   }
 
   public async create(
-    body: CreateBodyInterface
+    body: CreateMainBodyInterface,
   ): Promise<CreateResponseInterface> {
     return await Api.sendRequest(`/events/${this.eventId}/guests`, {
       method: 'post',
@@ -33,9 +37,22 @@ export const Guest = class {
     })
   }
 
+  public async createCompanion(
+    code: string,
+    body: CreateCompanionBodyInterface,
+  ): Promise<CreateResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/companions`,
+      {
+        method: 'post',
+        body: JSON.stringify(body),
+      },
+    )
+  }
+
   public async update(
     code: string,
-    body: UpdateBodyInterface
+    body: UpdateBodyInterface,
   ): Promise<UpdateResponseInterface> {
     return await Api.sendRequest(`/events/${this.eventId}/guests/${code}`, {
       method: 'put',
@@ -62,8 +79,16 @@ interface CreateResponseInterface {
   }
 }
 
-interface CreateBodyInterface {
+interface CreateMainBodyInterface extends CreateCompanionBodyInterface {
   status: string
+}
+
+interface CreateCompanionBodyInterface {
+  code: string
+  role: string
+  extended_fields: object
+  contact: ContactInterface
+  booking: BookingInterface
 }
 
 interface UpdateResponseInterface {

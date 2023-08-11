@@ -18,15 +18,16 @@ export interface GuestInterface {
   code: string
   role: string
   status: string
+  extended_fields: object
   booking: BookingInterface
   contact: ContactInterface
 }
 
-interface BookingInterface {
+export interface BookingInterface {
   extended_fields: object
 }
 
-interface ContactInterface {
+export interface ContactInterface {
   sex: string
   full_name: string
   first_name: string

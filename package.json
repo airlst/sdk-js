@@ -1,6 +1,6 @@
 {
   "name": "@airlst/sdk",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/airlst/sdk-js.git"
@@ -23,13 +23,13 @@
     "check": "yarn run format && yarn run lint"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.60.1",
-    "@typescript-eslint/parser": "^5.60.1",
-    "eslint": "^8.43.0",
-    "eslint-config-prettier": "^8.8.0",
-    "prettier": "^2.8.8",
+    "@typescript-eslint/eslint-plugin": "^6.3.0",
+    "@typescript-eslint/parser": "^6.3.0",
+    "eslint": "^8.46.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.0.1",
     "typescript": "^5.1.6",
-    "vitest": "^0.32.2",
+    "vitest": "^0.34.1",
     "vitest-fetch-mock": "^0.2.2"
   }
 }

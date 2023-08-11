@@ -72,6 +72,19 @@ const { data } = await new Guest('event-uuid').create({
 })
 ```
 
+#### Create a new companion guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').createCompanion('guest-code', {
+  contact: {
+    first_name: 'John',
+    last_name: 'Doe',
+  }
+})
+```
+
 #### Update existing guest
 
 ```javascript

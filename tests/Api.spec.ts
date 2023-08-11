@@ -43,7 +43,7 @@ test('sendRequest()', async () => {
     headers.reduce((carry, item) => {
       carry[item[0]] = item[1]
       return carry
-    }, {})
+    }, {}),
   )
 })
 
