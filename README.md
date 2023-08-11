@@ -77,7 +77,7 @@ const { data } = await new Guest('event-uuid').create({
 ```javascript
 import { Guest } from '@airlst/sdk'
 
-const { data } = await new Guest('event-uuid').createCompanion('guest-code', {
+const { data } = await new Guest('event-uuid').createCompanion('main-guest-code', {
   contact: {
     first_name: 'John',
     last_name: 'Doe',
