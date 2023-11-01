@@ -17,7 +17,7 @@ jobs:
           path: node_modules
           key: yarn-${{ hashFiles('yarn.lock') }}
       - name: Prepare Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 16
       - name: Install dependencies
