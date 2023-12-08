@@ -42,6 +42,14 @@ const { data } = await new Event().get('event-uuid')
 
 ### Guest methods
 
+#### List all guests
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').list('guest-code')
+```
+
 #### Validate guest code
 
 ```javascript

@@ -19,11 +19,13 @@ test('setCompanyApiKey()', () => {
 
 test('getRequestHeaders()', () => {
   Api.setApiKey('abc')
+  Api.setLocale('zyx')
 
   expect(Api.getRequestHeaders()).toStrictEqual({
     'content-type': 'application/json',
     accept: 'application/json',
     'x-api-key': 'abc',
+    'accept-language': 'zyx',
   })
 })
 
@@ -38,7 +40,7 @@ test('sendRequest()', async () => {
   expect(fetch.requests()[0].url).toEqual(Api.BASE_URL + '/whatever')
 
   const headers = Array.from(fetch.requests()[0].headers.entries())
-  expect(headers.length).toEqual(3)
+  expect(headers.length).toEqual(4)
   expect(Api.getRequestHeaders()).toStrictEqual(
     headers.reduce((carry, item) => {
       carry[item[0]] = item[1]

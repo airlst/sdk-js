@@ -1,6 +1,7 @@
 export const Api = class {
   public static BASE_URL = 'https://airlst.app/api'
   public static API_KEY: string
+  public static LOCALE: string = 'de-DE'
 
   public static setBaseURL(baseURL: string): void {
     this.BASE_URL = baseURL
@@ -10,11 +11,16 @@ export const Api = class {
     this.API_KEY = companyApiKey
   }
 
+  public static setLocale(locale: string): void {
+    this.LOCALE = locale
+  }
+
   public static getRequestHeaders(): HeadersInit {
     return {
       'content-type': 'application/json',
       accept: 'application/json',
       'x-api-key': this.API_KEY,
+      'accept-language': this.LOCALE,
     }
   }
 
@@ -41,4 +47,11 @@ export const Api = class {
 interface ResponseInterface {
   data: any
   meta?: any
+}
+
+export interface PaginationInterface {
+  per_page: number
+  current_page: number
+  total_pages: number
+  total_entries: number
 }

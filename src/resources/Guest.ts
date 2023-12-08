@@ -1,4 +1,4 @@
-import { Api } from '../Api'
+import { Api, PaginationInterface } from '../Api'
 import {
   GuestInterface,
   BookingInterface,
@@ -10,6 +10,37 @@ export const Guest = class {
 
   constructor(eventId: string) {
     this.eventId = eventId
+  }
+
+  public async list(
+    parameters: ListParametersInterface,
+  ): Promise<ListResponseInterface> {
+    const filters = parameters.filters.reduce(
+      (carry, { field, operator, value }) => {
+        carry[`filters(${field}*${operator || 'eq'})`] = value
+
+        return carry
+      },
+      {},
+    )
+
+    const sorts = parameters.sorts.reduce(
+      (carry, { field, order, direction }) => {
+        carry[`sorts(${field}*${order || '0'})`] = direction
+
+        return carry
+      },
+      {},
+    )
+
+    const query = new URLSearchParams({
+      search: parameters.search,
+      page: parameters.page || '1',
+      ...filters,
+      ...sorts,
+    }).toString()
+
+    return await Api.sendRequest(`/events/${this.eventId}/guests?${query}`)
   }
 
   public async validateCode(
@@ -61,6 +92,15 @@ export const Guest = class {
   }
 }
 
+interface ListResponseInterface {
+  data: {
+    guests: Array<GuestInterface>
+  }
+  meta?: {
+    pagination: PaginationInterface
+  }
+}
+
 interface ValidateCodeResponseInterface {
   data: {
     valid: boolean
@@ -77,6 +117,21 @@ interface CreateResponseInterface {
   data: {
     guest: GuestInterface
   }
+}
+
+interface ListParametersInterface {
+  search: string
+  page: string
+  filters: Array<{
+    field: string
+    operator: string
+    value: string
+  }>
+  sorts: Array<{
+    field: string
+    order?: string
+    direction: string
+  }>
 }
 
 interface CreateMainBodyInterface extends CreateCompanionBodyInterface {
