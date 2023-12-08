@@ -34,8 +34,9 @@ export const Guest = class {
     )
 
     const query = new URLSearchParams({
-      search: parameters.search,
       page: parameters.page || '1',
+      perPage: parameters.perPage || '25',
+      search: parameters.search,
       ...filters,
       ...sorts,
     }).toString()
@@ -120,8 +121,9 @@ interface CreateResponseInterface {
 }
 
 interface ListParametersInterface {
-  search: string
   page: string
+  perPage: string
+  search: string
   filters: Array<{
     field: string
     operator: string

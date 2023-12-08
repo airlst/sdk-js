@@ -11,6 +11,9 @@ afterEach(() => {
 
 test('list()', async () => {
   guest.list({
+    page: 'p',
+    perPage: 'pp',
+    search: 's',
     filters: [
       { field: 'ff1', operator: 'fo1', value: 'fv1' },
       { field: 'ff2', value: 'fv2' },
@@ -19,12 +22,10 @@ test('list()', async () => {
       { field: 'sf1', order: 'so1', direction: 'sd1' },
       { field: 'sf2', direction: 'sd2' },
     ],
-    search: 's',
-    page: 'p',
   })
 
   const expectedQuery =
-    'search=s&page=p&filters%28ff1*fo1%29=fv1&filters%28ff2*eq%29=fv2&sorts%28sf1*so1%29=sd1&sorts%28sf2*0%29=sd2'
+    'page=p&perPage=pp&search=s&filters%28ff1*fo1%29=fv1&filters%28ff2*eq%29=fv2&sorts%28sf1*so1%29=sd1&sorts%28sf2*0%29=sd2'
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
