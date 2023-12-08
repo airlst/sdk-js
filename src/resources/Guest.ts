@@ -15,7 +15,7 @@ export const Guest = class {
   public async list(
     parameters: ListParametersInterface,
   ): Promise<ListResponseInterface> {
-    const filters = parameters.filters.reduce(
+    const filters = parameters.filters?.reduce(
       (carry, { field, operator, value }) => {
         carry[`filters(${field}*${operator || 'eq'})`] = value
 
@@ -24,7 +24,7 @@ export const Guest = class {
       {},
     )
 
-    const sorts = parameters.sorts.reduce(
+    const sorts = parameters.sorts?.reduce(
       (carry, { field, order, direction }) => {
         carry[`sorts(${field}*${order || '0'})`] = direction
 
@@ -33,15 +33,20 @@ export const Guest = class {
       {},
     )
 
-    const query = new URLSearchParams({
+    const query = {
       page: parameters.page || '1',
       perPage: parameters.perPage || '25',
-      search: parameters.search,
       ...filters,
       ...sorts,
-    }).toString()
+    }
 
-    return await Api.sendRequest(`/events/${this.eventId}/guests?${query}`)
+    if (parameters.search) {
+      query['search'] = parameters.search
+    }
+
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests?${new URLSearchParams(query).toString()}`,
+    )
   }
 
   public async validateCode(
