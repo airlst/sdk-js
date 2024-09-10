@@ -107,10 +107,10 @@ test('delete()', async () => {
   guest.archive('guest-code')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
-  expect(apiMock).toHaveBeenCalledWith(
-    '/events/event-uuid/guests/guest-code',
-    { method: 'delete', body: '{"code":"guest-code"}' },
-  )
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/guest-code', {
+    method: 'delete',
+    body: '{"code":"guest-code"}',
+  })
 })
 
 test('checkin()', async () => {
@@ -122,8 +122,11 @@ test('checkin()', async () => {
   guest.checkin('guest-code', requestBody)
 
   expect(apiMock).toHaveBeenCalledTimes(1)
-  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/guest-code/checkins', {
-    method: 'post',
-    body: JSON.stringify(requestBody),
-  })
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/checkins',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
 })

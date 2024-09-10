@@ -14,8 +14,8 @@ export const Guest = class {
 
   public static readonly CheckinType = {
     CHECK_IN: 'check-in',
-    CHECK_OUT: 'check-out'
-  } as const;
+    CHECK_OUT: 'check-out',
+  } as const
 
   public async list(
     parameters: ListParametersInterface,
@@ -103,12 +103,9 @@ export const Guest = class {
   }
 
   public async archive(code: string): Promise<void> {
-    await Api.sendRequest(
-      `/events/${this.eventId}/guests/${code}/archive`,
-      {
-        method: 'put',
-      },
-    )
+    await Api.sendRequest(`/events/${this.eventId}/guests/${code}/archive`, {
+      method: 'put',
+    })
   }
 
   public async restore(code: string): Promise<RestoreResponseInterface> {
@@ -121,12 +118,9 @@ export const Guest = class {
   }
 
   public async delete(code: string): Promise<void> {
-    await Api.sendRequest(
-      `/events/${this.eventId}/guests/${code}`,
-      {
-        method: 'delete',
-      },
-    )
+    await Api.sendRequest(`/events/${this.eventId}/guests/${code}`, {
+      method: 'delete',
+    })
   }
 
   public async checkin(
