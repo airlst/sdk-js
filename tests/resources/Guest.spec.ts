@@ -89,27 +89,26 @@ test('archive()', async () => {
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
     '/events/event-uuid/guests/guest-code/archive',
-    { method: 'put', body: '{"code":"guest-code"}' },
+    { method: 'put' },
   )
 })
 
 test('restore()', async () => {
-  guest.archive('guest-code')
+  guest.restore('guest-code')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
     '/events/event-uuid/guests/guest-code/restore',
-    { method: 'put', body: '{"code":"guest-code"}' },
+    { method: 'put' },
   )
 })
 
 test('delete()', async () => {
-  guest.archive('guest-code')
+  guest.delete('guest-code')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/guest-code', {
     method: 'delete',
-    body: '{"code":"guest-code"}',
   })
 })
 
