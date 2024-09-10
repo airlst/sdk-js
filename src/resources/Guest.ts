@@ -12,6 +12,11 @@ export const Guest = class {
     this.eventId = eventId
   }
 
+  public static readonly CheckinType = {
+    CHECK_IN: 'check-in',
+    CHECK_OUT: 'check-out'
+  } as const;
+
   public async list(
     parameters: ListParametersInterface,
   ): Promise<ListResponseInterface> {
@@ -96,6 +101,46 @@ export const Guest = class {
       body: JSON.stringify(body),
     })
   }
+
+  public async archive(code: string): Promise<void> {
+    await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/archive`,
+      {
+        method: 'put',
+      },
+    )
+  }
+
+  public async restore(code: string): Promise<RestoreResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/restore`,
+      {
+        method: 'put',
+      },
+    )
+  }
+
+  public async delete(code: string): Promise<void> {
+    await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}`,
+      {
+        method: 'delete',
+      },
+    )
+  }
+
+  public async checkin(
+    code: string,
+    body: CheckinBodyInterface,
+  ): Promise<CheckinResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/checkins`,
+      {
+        method: 'post',
+        body: JSON.stringify(body),
+      },
+    )
+  }
 }
 
 interface ListResponseInterface {
@@ -114,6 +159,18 @@ interface ValidateCodeResponseInterface {
 }
 
 interface GetResponseInterface {
+  data: {
+    guest: GuestInterface
+  }
+}
+
+interface CheckinResponseInterface {
+  data: {
+    guest: GuestInterface
+  }
+}
+
+interface RestoreResponseInterface {
   data: {
     guest: GuestInterface
   }
@@ -161,4 +218,11 @@ interface UpdateResponseInterface {
 
 interface UpdateBodyInterface {
   status: string
+}
+
+interface CheckinBodyInterface {
+  type: 'check-in' | 'check-out'
+  device?: string
+  location?: string
+  timestamp: number
 }
