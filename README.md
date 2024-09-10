@@ -133,6 +133,14 @@ import { Guest } from '@airlst/sdk'
 const { data } = await new Guest('event-uuid').restore('guest-code')
 ```
 
+#### Delete guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').delete('guest-code')
+```
+
 
 #### Check in a guest
 
