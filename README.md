@@ -141,7 +141,6 @@ import { Guest } from '@airlst/sdk'
 await new Guest('event-uuid').delete('guest-code')
 ```
 
-
 #### Check in a guest
 
 ```javascript
@@ -153,4 +152,18 @@ const { data } = await new Guest('event-uuid').checkin('guest-code', {
   location: 'Munich',
   timestamp: Date.now(),
 })
+```
+
+#### Create recommendation
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').createRecommendation('guest-code', {
+    status: 'confirmed',
+    contact: {
+      first_name: 'John',
+      last_name: 'Doe',
+    }
+  })
 ```

@@ -129,3 +129,16 @@ test('checkin()', async () => {
     },
   )
 })
+
+test('createRecommendation()', async () => {
+  guest.checkin('guest-code', { a: 'b' })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/checkins',
+    {
+      method: 'post',
+      body: '{"a":"b"}',
+    },
+  )
+})

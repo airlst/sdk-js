@@ -135,6 +135,19 @@ export const Guest = class {
       },
     )
   }
+
+  public async createRecommendation(
+    code: string,
+    body: CreateRecommendationBodyInterface,
+  ): Promise<CreateRecommendationResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/recommendations`,
+      {
+        method: 'post',
+        body: JSON.stringify(body),
+      },
+    )
+  }
 }
 
 interface ListResponseInterface {
@@ -171,6 +184,12 @@ interface RestoreResponseInterface {
 }
 
 interface CreateResponseInterface {
+  data: {
+    guest: GuestInterface
+  }
+}
+
+interface CreateRecommendationResponseInterface {
   data: {
     guest: GuestInterface
   }
@@ -220,3 +239,5 @@ interface CheckinBodyInterface {
   location?: string
   timestamp: number
 }
+
+interface CreateRecommendationBodyInterface extends CreateMainBodyInterface {}
