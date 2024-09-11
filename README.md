@@ -122,7 +122,7 @@ const { data } = await new Guest('event-uuid').update('guest-code', { status: 'c
 ```javascript
 import { Guest } from '@airlst/sdk'
 
-const { data } = await new Guest('event-uuid').archive('guest-code')
+await new Guest('event-uuid').archive('guest-code')
 ```
 
 #### Restore an archived guest
@@ -138,7 +138,7 @@ const { data } = await new Guest('event-uuid').restore('guest-code')
 ```javascript
 import { Guest } from '@airlst/sdk'
 
-const { data } = await new Guest('event-uuid').delete('guest-code')
+await new Guest('event-uuid').delete('guest-code')
 ```
 
 
