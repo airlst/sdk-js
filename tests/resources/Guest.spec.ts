@@ -82,3 +82,63 @@ test('update()', async () => {
     body: '{"a":"b"}',
   })
 })
+
+test('archive()', async () => {
+  guest.archive('guest-code')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/archive',
+    { method: 'put' },
+  )
+})
+
+test('restore()', async () => {
+  guest.restore('guest-code')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/restore',
+    { method: 'put' },
+  )
+})
+
+test('delete()', async () => {
+  guest.delete('guest-code')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/guest-code', {
+    method: 'delete',
+  })
+})
+
+test('checkin()', async () => {
+  const requestBody = {
+    type: Guest.CheckinType.CHECK_IN,
+    timestamp: 2024,
+  }
+
+  guest.checkin('guest-code', requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/checkins',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
+test('createRecommendation()', async () => {
+  guest.createRecommendation('guest-code', { a: 'b' })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/recommendations',
+    {
+      method: 'post',
+      body: '{"a":"b"}',
+    },
+  )
+})
