@@ -91,7 +91,7 @@ interface CalendarEvent {
   organizer_email: string
 }
 
-export interface EmailTemplate {
+export interface EmailTemplateInterface {
   id: string
   name: string
   subject: {

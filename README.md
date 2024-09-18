@@ -168,20 +168,22 @@ const { data } = await new Guest('event-uuid').createRecommendation('guest-code'
   })
 ```
 
+### Email Template methods
+
 #### Retrieve all email templates for the event
 
 ```javascript
-import { Guest } from '@airlst/sdk'
+import { EmailTemplate } from '@airlst/sdk'
 
-const { data } = await new Event().getEmailTemplates('event-uuid')
+const { data } = await new EmailTemplate('event-uuid').list()
 ```
 
 #### Send email template to selected guests
 
 ```javascript
-import { Guest } from '@airlst/sdk'
+import { EmailTemplate } from '@airlst/sdk'
 
-const { data } = await new Event().sendEmailTemplate('event-uuid','email-template-uuid',{
+await new EmailTemplate('event-uuid').send('email-template-uuid',{
   guests:[
     "guest-code-1",
     "guest-code-2"
