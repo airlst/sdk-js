@@ -13,7 +13,7 @@ export const EmailTemplate = class {
     body: SendEmailTemplateInterface,
   ): Promise<void> {
     await Api.sendRequest(
-      `/events/${this.eventId}/email-templates/${emailTemplateId}/send`,
+      `/events/${this.eventId}/emails/email-templates/${emailTemplateId}/send`,
       {
         method: 'post',
         body: JSON.stringify(body),
@@ -22,7 +22,9 @@ export const EmailTemplate = class {
   }
 
   public async list(): Promise<ListEmailTemplatesInterface> {
-    return await Api.sendRequest(`/events/${this.eventId}/email-templates`)
+    return await Api.sendRequest(
+      `/events/${this.eventId}/emails/email-templates`,
+    )
   }
 }
 

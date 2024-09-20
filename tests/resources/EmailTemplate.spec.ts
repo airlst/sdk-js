@@ -17,7 +17,7 @@ test('send()', async () => {
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
-    '/events/event-uuid/email-templates/email-template-uuid/send',
+    '/events/event-uuid/emails/email-templates/email-template-uuid/send',
     {
       method: 'post',
       body: JSON.stringify(requestBody),
@@ -29,5 +29,7 @@ test('list()', async () => {
   emailTemplate.list()
 
   expect(apiMock).toHaveBeenCalledTimes(1)
-  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/email-templates')
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/emails/email-templates',
+  )
 })
