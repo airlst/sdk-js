@@ -12,7 +12,7 @@ export const EmailTemplate = class {
     emailTemplateId: string,
     body: SendEmailTemplateInterface,
   ): Promise<void> {
-    await Api.sendRequest(
+    return await Api.sendRequest(
       `/events/${this.eventId}/emails/email-templates/${emailTemplateId}/send`,
       {
         method: 'post',
