@@ -4,7 +4,7 @@
     "outDir": "./dist",
     "target": "ESNext",
     "module": "ESNext",
-    "baseUrl": "..",
+    "baseUrl": ".."
   },
   "include": [
     "src/**/*"

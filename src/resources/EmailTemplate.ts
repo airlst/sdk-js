@@ -10,8 +10,8 @@ export const EmailTemplate = class {
 
   public async send(
     emailTemplateId: string,
-    body: SendEmailTemplateInterface,
-  ): Promise<void> {
+    body: SendEmailTemplateBodyInterface,
+  ): Promise<SendEmailTemplateResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/emails/email-templates/${emailTemplateId}/send`,
       {
@@ -21,18 +21,20 @@ export const EmailTemplate = class {
     )
   }
 
-  public async list(): Promise<ListEmailTemplatesInterface> {
+  public async list(): Promise<ListResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/emails/email-templates`,
     )
   }
 }
 
-interface SendEmailTemplateInterface {
+interface SendEmailTemplateBodyInterface {
   guests: Array<string>
 }
 
-interface ListEmailTemplatesInterface {
+interface SendEmailTemplateResponseInterface {}
+
+interface ListResponseInterface {
   data: {
     emailTemplates: Array<EmailTemplateInterface>
   }

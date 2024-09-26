@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { Api } from '../src'
+import { Api } from '../src/'
 
 test('setBaseURL()', () => {
   expect(Api.BASE_URL).toBe('https://airlst.app/api')
