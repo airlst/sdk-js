@@ -40,7 +40,7 @@ export const Guest = class {
 
     const query = {
       page: parameters.page || '1',
-      perPage: parameters.perPage || '25',
+      per_page: parameters.perPage || '25',
       ...filters,
       ...sorts,
     }

@@ -25,7 +25,7 @@ test('list()', async () => {
   })
 
   const expectedQuery =
-    'page=p&perPage=pp&filters%28ff1*fo1%29=fv1&filters%28ff2*eq%29=fv2&sorts%28sf1*so1%29=sd1&sorts%28sf2*0%29=sd2&search=s'
+    'page=p&per_page=pp&filters%28ff1*fo1%29=fv1&filters%28ff2*eq%29=fv2&sorts%28sf1*so1%29=sd1&sorts%28sf2*0%29=sd2&search=s'
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
