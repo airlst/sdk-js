@@ -150,7 +150,7 @@ const { data } = await new Guest('event-uuid').checkin('guest-code', {
   type: Guest.CheckinType.CHECK_IN,
   device: 'Mobile',
   location: 'Munich',
-  timestamp: Date.now(),
+  timestamp: Math.round(+new Date() / 1000),
 })
 ```
 
