@@ -40,7 +40,12 @@ export const Api = class {
       throw response
     }
 
-    return await response.json()
+    try {
+      return await response.json();
+    } catch {
+      // If JSON parsing fails (empty body), just return
+      return {} as ResponseInterface;
+    }
   }
 }
 
