@@ -41,10 +41,10 @@ export const Api = class {
     }
 
     try {
-      return await response.json();
+      return await response.json()
     } catch {
       // If JSON parsing fails (empty body), just return
-      return {} as ResponseInterface;
+      return {} as ResponseInterface
     }
   }
 }
