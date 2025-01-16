@@ -34,7 +34,7 @@ export const Api = class {
         ...options?.headers,
       },
       ...options,
-    })
+    } as RequestInit)
 
     if (!response.ok) {
       throw response
