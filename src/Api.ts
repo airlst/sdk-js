@@ -34,13 +34,18 @@ export const Api = class {
         ...options?.headers,
       },
       ...options,
-    })
+    } as RequestInit)
 
     if (!response.ok) {
       throw response
     }
 
-    return await response.json()
+    try {
+      return await response.json()
+    } catch {
+      // If JSON parsing fails (empty body), just return
+      return {} as ResponseInterface
+    }
   }
 }
 
