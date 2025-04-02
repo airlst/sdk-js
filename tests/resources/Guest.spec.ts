@@ -152,9 +152,8 @@ test('getAttachments()', async () => {
   )
 })
 
-
 test('attachFile()', async () => {
-  const file = new File(['file content'], 'test.txt', { type: 'text/plain' });
+  const file = new File(['file content'], 'test.txt', { type: 'text/plain' })
 
   const signedUrlResponse = {
     data: {
@@ -163,22 +162,30 @@ test('attachFile()', async () => {
       key: 'mock-key',
       bucket: 'mock-bucket',
     },
-  };
-  apiMock.mockResolvedValueOnce(signedUrlResponse);
+  }
+  apiMock.mockResolvedValueOnce(signedUrlResponse)
 
-  global.fetch = vi.fn().mockResolvedValueOnce({ ok: true });
+  global.fetch = vi.fn().mockResolvedValueOnce({ ok: true })
 
-  const attachmentResponse = { data: { attachment: { id: 1, name: file.name } } };
-  apiMock.mockResolvedValueOnce(attachmentResponse);
+  const attachmentResponse = {
+    data: { attachment: { id: 1, name: file.name } },
+  }
+  apiMock.mockResolvedValueOnce(attachmentResponse)
 
-  const result = await guest.attachFile('guest-code', file);
+  const result = await guest.attachFile('guest-code', file)
 
-  expect(apiMock).toHaveBeenNthCalledWith(1, `/events/${guest.eventId}/signed-storage-url`);
+  expect(apiMock).toHaveBeenNthCalledWith(
+    1,
+    `/events/${guest.eventId}/signed-storage-url`,
+  )
 
-  expect(global.fetch).toHaveBeenCalledWith('https://mock-storage-url.com/upload', {
-    method: 'put',
-    body: file,
-  });
+  expect(global.fetch).toHaveBeenCalledWith(
+    'https://mock-storage-url.com/upload',
+    {
+      method: 'put',
+      body: file,
+    },
+  )
 
   expect(apiMock).toHaveBeenNthCalledWith(
     2,
@@ -193,8 +200,8 @@ test('attachFile()', async () => {
         size: file.size,
         content_type: file.type,
       }),
-    }
-  );
+    },
+  )
 
-  expect(result).toEqual(attachmentResponse);
-});
+  expect(result).toEqual(attachmentResponse)
+})
