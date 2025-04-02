@@ -190,3 +190,19 @@ await new EmailTemplate('event-uuid').send('email-template-uuid',{
     ]
 })
 ```
+
+#### Get all guest attachments
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+await new Guest('event-uuid').getAttachments('guest-code')
+```
+
+#### Attach file to guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+await new Guest('event-uuid').attachFile('guest-code', file);
+```
