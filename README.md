@@ -215,3 +215,19 @@ import { Contact } from '@airlst/sdk'
 
 const { data } = await new Contact().getEvents('contact-code')
 ```
+
+#### Get all guest attachments
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+await new Guest('event-uuid').getAttachments('guest-code')
+```
+
+#### Attach file to guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+await new Guest('event-uuid').attachFile('guest-code', file);
+```
