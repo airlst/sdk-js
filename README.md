@@ -190,3 +190,28 @@ await new EmailTemplate('event-uuid').send('email-template-uuid',{
     ]
 })
 ```
+### Contact methods
+
+#### Validate guest code
+
+```javascript
+import { Contact } from '@airlst/sdk'
+
+const { data } = await new Contact().validateCode('contact-code', 'good@email.com')
+```
+
+#### Get contact with code
+
+```javascript
+import { Contact } from '@airlst/sdk'
+
+const { data } = await new Contact().get('contact-code')
+```
+
+#### Get events for the contact
+
+```javascript
+import { Contact } from '@airlst/sdk'
+
+const { data } = await new Contact().getEvents('contact-code')
+```
