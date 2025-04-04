@@ -13,10 +13,10 @@ test('validateCode()', async () => {
   contact.validateCode('contact-code', 'email@email.com')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
-  expect(apiMock).toHaveBeenCalledWith(
-    '/companies/contacts/validate-code',
-    { method: 'post', body: '{"code":"contact-code","email":"email@email.com"}' },
-  )
+  expect(apiMock).toHaveBeenCalledWith('/companies/contacts/validate-code', {
+    method: 'post',
+    body: '{"code":"contact-code","email":"email@email.com"}',
+  })
 })
 
 test('get()', async () => {
@@ -30,5 +30,7 @@ test('getEvents()', async () => {
   contact.getEvents('contact-code')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
-  expect(apiMock).toHaveBeenCalledWith('/companies/contacts/contact-code/events')
+  expect(apiMock).toHaveBeenCalledWith(
+    '/companies/contacts/contact-code/events',
+  )
 })
