@@ -28,6 +28,7 @@ export interface BookingInterface {
 }
 
 export interface ContactInterface {
+  code: string
   sex: string
   full_name: string
   first_name: string
