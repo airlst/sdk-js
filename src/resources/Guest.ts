@@ -82,6 +82,7 @@ export const Guest = class {
   public async attachFile(
     code: string,
     file: File,
+    customProperties: object = {},
   ): Promise<AttachmentResponseInterface> {
     const { data } = await Api.sendRequest(
       `/events/${this.eventId}/signed-storage-url`,
@@ -104,6 +105,7 @@ export const Guest = class {
           name: file.name,
           size: file.size,
           content_type: file.type,
+          custom_properties: customProperties,
         }),
       },
     )

@@ -204,5 +204,5 @@ await new Guest('event-uuid').getAttachments('guest-code')
 ```javascript
 import { Guest } from '@airlst/sdk'
 
-await new Guest('event-uuid').attachFile('guest-code', file);
+await new Guest('event-uuid').attachFile('guest-code', file, { type:'avatar'});
 ```

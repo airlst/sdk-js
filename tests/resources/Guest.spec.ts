@@ -172,7 +172,7 @@ test('attachFile()', async () => {
   }
   apiMock.mockResolvedValueOnce(attachmentResponse)
 
-  const result = await guest.attachFile('guest-code', file)
+  const result = await guest.attachFile('guest-code', file, { type: 'avatar' })
 
   expect(apiMock).toHaveBeenNthCalledWith(
     1,
@@ -199,6 +199,7 @@ test('attachFile()', async () => {
         name: file.name,
         size: file.size,
         content_type: file.type,
+        custom_properties: { type: 'avatar' },
       }),
     },
   )
