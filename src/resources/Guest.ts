@@ -79,6 +79,15 @@ export const Guest = class {
     )
   }
 
+  public async getAttachmentSignedUrl(
+    code: string,
+    uuid: string,
+  ): Promise<GetSignerUrlResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/attachments/${uuid}/url`,
+    )
+  }
+
   public async attachFile(
     code: string,
     file: File,
@@ -215,6 +224,12 @@ interface GetResponseInterface {
 interface GetAttachmentsResponseInterface {
   data: {
     attachments: Array<AttachmentInterface>
+  }
+}
+
+interface GetSignerUrlResponseInterface {
+  data: {
+    url: string
   }
 }
 
