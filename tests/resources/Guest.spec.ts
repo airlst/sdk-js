@@ -206,3 +206,12 @@ test('attachFile()', async () => {
 
   expect(result).toEqual(attachmentResponse)
 })
+
+test('getAttachmentSignedUrl()', async () => {
+  guest.getAttachmentSignedUrl('guest-code', 'attachment-uuid')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/attachments/attachment-uuid/url',
+  )
+})

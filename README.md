@@ -224,6 +224,16 @@ import { Guest } from '@airlst/sdk'
 await new Guest('event-uuid').getAttachments('guest-code')
 ```
 
+#### Get attachment signed downloadable URL
+**Note:** The generated URL will be valid for **10 minutes**
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+await new Guest('event-uuid').getAttachmentSignedUrl('guest-code','attachment-uuid')
+```
+
+
 #### Attach file to guest
 
 ```javascript
