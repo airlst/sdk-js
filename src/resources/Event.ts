@@ -1,5 +1,5 @@
 import { Api } from '../Api'
-import {AttachmentInterface, EventInterface} from '../interfaces'
+import { AttachmentInterface, EventInterface } from '../interfaces'
 
 export const Event = class {
   public async list(): Promise<ListResponseInterface> {
@@ -22,9 +22,9 @@ export const Event = class {
         method: 'put',
         body: JSON.stringify({
           visibility: uploadVisibility,
-          content_type: file.type
+          content_type: file.type,
         }),
-      }
+      },
     )
     const response = await fetch(data.url, {
       method: 'put',

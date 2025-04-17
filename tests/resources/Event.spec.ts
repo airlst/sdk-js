@@ -43,7 +43,12 @@ test('saveTemporaryUpload()', async () => {
   }
   apiMock.mockResolvedValueOnce(attachmentResponse)
 
-  const result = await event.saveTemporaryUpload('event-uuid', file, 'private', { type: 'avatar' })
+  const result = await event.saveTemporaryUpload(
+    'event-uuid',
+    file,
+    'private',
+    { type: 'avatar' },
+  )
 
   expect(apiMock).toHaveBeenNthCalledWith(
     1,
@@ -52,9 +57,9 @@ test('saveTemporaryUpload()', async () => {
       method: 'put',
       body: JSON.stringify({
         visibility: 'private',
-        content_type: file.type
-      })
-    }
+        content_type: file.type,
+      }),
+    },
   )
 
   expect(global.fetch).toHaveBeenCalledWith(
