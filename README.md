@@ -40,6 +40,14 @@ import { Event } from '@airlst/sdk'
 const { data } = await new Event().get('event-uuid')
 ```
 
+#### Create temporary upload which can be attached to a guest extended field using upload uuid
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+await new Event().saveTemporaryUpload(eventUuid, file, 'public-read', {type:"avatar"});
+```
+
 ### Guest methods
 
 #### List all guests
@@ -234,10 +242,3 @@ await new Guest('event-uuid').getAttachmentSignedUrl('guest-code','attachment-uu
 ```
 
 
-#### Attach file to guest
-
-```javascript
-import { Guest } from '@airlst/sdk'
-
-await new Guest('event-uuid').attachFile('guest-code', file, { type:'avatar'});
-```
