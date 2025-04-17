@@ -1,5 +1,5 @@
 import { Api } from '../Api'
-import { EventInterface } from '../interfaces'
+import { AttachmentInterface, EventInterface } from '../interfaces'
 
 export const Event = class {
   public async list(): Promise<ListResponseInterface> {
@@ -8,6 +8,46 @@ export const Event = class {
 
   public async get(uuid: string): Promise<GetResponseInterface> {
     return await Api.sendRequest(`/events/${uuid}`)
+  }
+
+  public async saveTemporaryUpload(
+    eventUuid: string,
+    file: File,
+    uploadVisibility: string = 'private',
+    customProperties: object = [],
+  ): Promise<TemporaryUploadResponseInterface> {
+    const { data } = await Api.sendRequest(
+      `/events/${eventUuid}/signed-storage-url`,
+      {
+        method: 'put',
+        body: JSON.stringify({
+          visibility: uploadVisibility,
+          content_type: file.type,
+        }),
+      },
+    )
+    const response = await fetch(data.url, {
+      method: 'put',
+      body: file,
+    })
+    if (!response.ok) {
+      throw new Error('Error during file upload')
+    }
+    return await Api.sendRequest(
+      `/events/${eventUuid}/create-temporary-upload`,
+      {
+        method: 'post',
+        body: JSON.stringify({
+          uuid: data.uuid,
+          key: data.key,
+          bucket: data.bucket,
+          name: file.name,
+          size: file.size,
+          content_type: file.type,
+          custom_properties: customProperties,
+        }),
+      },
+    )
   }
 }
 
@@ -20,5 +60,11 @@ interface ListResponseInterface {
 interface GetResponseInterface {
   data: {
     event: EventInterface
+  }
+}
+
+interface TemporaryUploadResponseInterface {
+  data: {
+    temporary_upload: AttachmentInterface
   }
 }

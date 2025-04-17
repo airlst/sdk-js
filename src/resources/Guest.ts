@@ -88,38 +88,6 @@ export const Guest = class {
     )
   }
 
-  public async attachFile(
-    code: string,
-    file: File,
-    customProperties: object = {},
-  ): Promise<AttachmentResponseInterface> {
-    const { data } = await Api.sendRequest(
-      `/events/${this.eventId}/signed-storage-url`,
-    )
-    const response = await fetch(data.url, {
-      method: 'put',
-      body: file,
-    })
-    if (!response.ok) {
-      throw new Error('Error during file upload')
-    }
-    return await Api.sendRequest(
-      `/events/${this.eventId}/guests/${code}/attachments`,
-      {
-        method: 'post',
-        body: JSON.stringify({
-          uuid: data.uuid,
-          key: data.key,
-          bucket: data.bucket,
-          name: file.name,
-          size: file.size,
-          content_type: file.type,
-          custom_properties: customProperties,
-        }),
-      },
-    )
-  }
-
   public async create(
     body: CreateMainBodyInterface,
   ): Promise<CreateResponseInterface> {
@@ -230,12 +198,6 @@ interface GetAttachmentsResponseInterface {
 interface GetSignerUrlResponseInterface {
   data: {
     url: string
-  }
-}
-
-interface AttachmentResponseInterface {
-  data: {
-    attachments: AttachmentInterface
   }
 }
 

@@ -152,61 +152,6 @@ test('getAttachments()', async () => {
   )
 })
 
-test('attachFile()', async () => {
-  const file = new File(['file content'], 'test.txt', { type: 'text/plain' })
-
-  const signedUrlResponse = {
-    data: {
-      url: 'https://mock-storage-url.com/upload',
-      uuid: 'mock-uuid',
-      key: 'mock-key',
-      bucket: 'mock-bucket',
-    },
-  }
-  apiMock.mockResolvedValueOnce(signedUrlResponse)
-
-  global.fetch = vi.fn().mockResolvedValueOnce({ ok: true })
-
-  const attachmentResponse = {
-    data: { attachment: { id: 1, name: file.name } },
-  }
-  apiMock.mockResolvedValueOnce(attachmentResponse)
-
-  const result = await guest.attachFile('guest-code', file, { type: 'avatar' })
-
-  expect(apiMock).toHaveBeenNthCalledWith(
-    1,
-    `/events/${guest.eventId}/signed-storage-url`,
-  )
-
-  expect(global.fetch).toHaveBeenCalledWith(
-    'https://mock-storage-url.com/upload',
-    {
-      method: 'put',
-      body: file,
-    },
-  )
-
-  expect(apiMock).toHaveBeenNthCalledWith(
-    2,
-    `/events/${guest.eventId}/guests/guest-code/attachments`,
-    {
-      method: 'post',
-      body: JSON.stringify({
-        uuid: 'mock-uuid',
-        key: 'mock-key',
-        bucket: 'mock-bucket',
-        name: file.name,
-        size: file.size,
-        content_type: file.type,
-        custom_properties: { type: 'avatar' },
-      }),
-    },
-  )
-
-  expect(result).toEqual(attachmentResponse)
-})
-
 test('getAttachmentSignedUrl()', async () => {
   guest.getAttachmentSignedUrl('guest-code', 'attachment-uuid')
 
