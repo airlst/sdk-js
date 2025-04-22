@@ -205,7 +205,7 @@ await new EmailTemplate('event-uuid').send('email-template-uuid',{
 ```javascript
 import { Contact } from '@airlst/sdk'
 
-const { data } = await new Contact().validateCode('contact-code', 'good@email.com')
+const { data } = await new Contact().validateCode('contact-code')
 ```
 
 #### Get contact with code
