@@ -21,6 +21,7 @@ export interface GuestInterface {
   extended_fields: object
   booking: BookingInterface
   contact: ContactInterface
+  reservations: Array<ReservationInterface>
 }
 
 export interface BookingInterface {
@@ -82,4 +83,45 @@ export interface AttachmentInterface {
   custom_properties: any
   extension: string
   size: number
+}
+
+export interface BookableGroupInterface {
+  id: string
+  name: string
+  type: string
+  description: string
+  create_reservation_on_checkin: boolean
+  max_number_of_reservations: number
+}
+
+export interface CarBookableInterface {
+  id: string
+  name: string
+  description: string
+  code: string
+  make: string
+  model: string
+  year: number
+  color: string
+  license_plate: string
+  fuel_type: string
+  extended_fields: object
+  bookable_group: BookableGroupInterface
+  reservations: Array<ReservationInterface>
+}
+
+export interface ReservationInterface {
+  id: string
+  starts_at: string
+  ends_at: string
+  guest: GuestInterface
+  bookable: CarBookableInterface
+}
+
+export interface AvailabilityInterface {
+  starts_at: string
+  ends_at: string
+  buffer_time: number
+  min: number
+  max: number
 }
