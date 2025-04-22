@@ -3,7 +3,7 @@ import { ContactInterface, EventInterface } from '../interfaces'
 
 export const Contact = class {
   public async validateCode(
-    code: string
+    code: string,
   ): Promise<ValidateCodeResponseInterface> {
     return await Api.sendRequest('/companies/contacts/validate-code', {
       method: 'post',
