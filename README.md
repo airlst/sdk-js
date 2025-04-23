@@ -240,5 +240,56 @@ import { Guest } from '@airlst/sdk'
 
 await new Guest('event-uuid').getAttachmentSignedUrl('guest-code','attachment-uuid')
 ```
+### Bookables methods
 
+#### Get list of bookable groups
 
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+const { data } = await new Bookable('event-uuid').listGroups()
+```
+
+#### Get list of bookable objects for group
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+const { data } = await new Bookable('event-uuid').listBookables('bookable-group-uuid')
+```
+
+#### Get list of availabilities for bookable object
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+const { data } = await new Bookable('event-uuid').listAvailabilities('bookable-group-uuid', 'bookable-object-uuid', {
+  start_date: '2025-01-02',
+  end_date: '2025-02-03'
+})
+```
+
+#### Create reservation
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+const { data } = await new Bookable('event-uuid').createReservation('bookable-group-uuid', {
+    guest_code: 'guest-code',
+    reservations: [
+      {
+        starts_at: '2025-02-04 13:20:00',
+        ends_at: '2025-02-04 13:40:00',
+        bookable_id: 'bookable-object-uuid'
+      }
+    ]
+})
+```
+
+#### Delete reservation
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+await new Bookable('event-uuid').deleteReservation('guest-code', 'reservation-uuid')
+```
