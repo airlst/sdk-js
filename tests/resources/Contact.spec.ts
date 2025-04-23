@@ -10,12 +10,12 @@ afterEach(() => {
 })
 
 test('validateCode()', async () => {
-  contact.validateCode('contact-code', 'email@email.com')
+  contact.validateCode('contact-code')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith('/companies/contacts/validate-code', {
     method: 'post',
-    body: '{"code":"contact-code","email":"email@email.com"}',
+    body: '{"code":"contact-code"}',
   })
 })
 
