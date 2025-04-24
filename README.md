@@ -45,7 +45,7 @@ const { data } = await new Event().get('event-uuid')
 ```javascript
 import { Guest } from '@airlst/sdk'
 
-await new Event().saveTemporaryUpload(eventUuid, file, 'public-read', {type:"avatar"});
+await new Event().saveTemporaryUpload(eventUuid, file, false);
 ```
 
 ### Guest methods
