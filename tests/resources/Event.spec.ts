@@ -46,8 +46,7 @@ test('saveTemporaryUpload()', async () => {
   const result = await event.saveTemporaryUpload(
     'event-uuid',
     file,
-    'private',
-    { type: 'avatar' },
+    true,
   )
 
   expect(apiMock).toHaveBeenNthCalledWith(
@@ -82,7 +81,7 @@ test('saveTemporaryUpload()', async () => {
         name: file.name,
         size: file.size,
         content_type: file.type,
-        custom_properties: { type: 'avatar' },
+        custom_properties: { visibility: 'private' },
       }),
     },
   )

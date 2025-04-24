@@ -13,15 +13,15 @@ export const Event = class {
   public async saveTemporaryUpload(
     eventUuid: string,
     file: File,
-    uploadVisibility: string = 'private',
-    customProperties: object = [],
+    isPrivate: boolean = true,
   ): Promise<TemporaryUploadResponseInterface> {
+    let visibility = isPrivate ? 'private' : 'public-read'
     const { data } = await Api.sendRequest(
       `/events/${eventUuid}/signed-storage-url`,
       {
         method: 'put',
         body: JSON.stringify({
-          visibility: uploadVisibility,
+          visibility: visibility,
           content_type: file.type,
         }),
       },
@@ -44,7 +44,7 @@ export const Event = class {
           name: file.name,
           size: file.size,
           content_type: file.type,
-          custom_properties: customProperties,
+          custom_properties: {visibility: visibility},
         }),
       },
     )

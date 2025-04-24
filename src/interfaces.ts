@@ -74,15 +74,13 @@ export interface EmailTemplateInterface {
 }
 
 export interface AttachmentInterface {
-  name: string
   file_name: string
   uuid: string
   preview_url: string
   original_url: string
-  order: number
-  custom_properties: any
   extension: string
   size: number
+  visibility: string
 }
 
 export interface BookableGroupInterface {
