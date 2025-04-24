@@ -44,7 +44,7 @@ export const Event = class {
           name: file.name,
           size: file.size,
           content_type: file.type,
-          custom_properties: {visibility: visibility},
+          custom_properties: { visibility: visibility },
         }),
       },
     )

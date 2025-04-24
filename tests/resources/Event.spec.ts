@@ -43,11 +43,7 @@ test('saveTemporaryUpload()', async () => {
   }
   apiMock.mockResolvedValueOnce(attachmentResponse)
 
-  const result = await event.saveTemporaryUpload(
-    'event-uuid',
-    file,
-    true,
-  )
+  const result = await event.saveTemporaryUpload('event-uuid', file, true)
 
   expect(apiMock).toHaveBeenNthCalledWith(
     1,
