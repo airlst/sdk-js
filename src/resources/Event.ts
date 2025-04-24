@@ -15,7 +15,7 @@ export const Event = class {
     file: File,
     isPrivate: boolean = true,
   ): Promise<TemporaryUploadResponseInterface> {
-    let visibility = isPrivate ? 'private' : 'public-read'
+    const visibility = isPrivate ? 'private' : 'public-read'
     const { data } = await Api.sendRequest(
       `/events/${eventUuid}/signed-storage-url`,
       {
