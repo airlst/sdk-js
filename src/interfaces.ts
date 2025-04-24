@@ -81,6 +81,7 @@ export interface AttachmentInterface {
   extension: string
   size: number
   visibility: string
+  key: string
 }
 
 export interface BookableGroupInterface {
