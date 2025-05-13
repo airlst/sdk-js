@@ -40,12 +40,20 @@ import { Event } from '@airlst/sdk'
 const { data } = await new Event().get('event-uuid')
 ```
 
+#### Get temporary signed url to upload file directly to cloud storage
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+await new Event().generateTemporaryUploadUrl(eventUuid, fileMimeType, false);
+```
+
 #### Create temporary upload which can be attached to a guest extended field using upload uuid
 
 ```javascript
 import { Guest } from '@airlst/sdk'
 
-await new Event().saveTemporaryUpload(eventUuid, file, false);
+await new Event().saveTemporaryUpload(eventUuid, temporaryUrlData, fileName, fileSize, fileMimeType, false);
 ```
 
 ### Guest methods
