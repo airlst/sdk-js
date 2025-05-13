@@ -23,9 +23,7 @@ test('get()', async () => {
   expect(apiMock).toHaveBeenCalledWith('/events/abc')
 })
 
-test('saveTemporaryUpload()', async () => {
-  const file = new File(['file content'], 'test.txt', { type: 'text/plain' })
-
+test('generateTemporaryUploadUrl()', async () => {
   const signedUrlResponse = {
     data: {
       url: 'https://mock-storage-url.com/upload',
@@ -36,37 +34,49 @@ test('saveTemporaryUpload()', async () => {
   }
   apiMock.mockResolvedValueOnce(signedUrlResponse)
 
-  global.fetch = vi.fn().mockResolvedValueOnce({ ok: true })
+  const result = await event.generateTemporaryUploadUrl(
+    'event-uuid',
+    'text/plain',
+    true,
+  )
 
-  const attachmentResponse = {
-    data: { attachment: { id: 1, name: file.name } },
-  }
-  apiMock.mockResolvedValueOnce(attachmentResponse)
-
-  const result = await event.saveTemporaryUpload('event-uuid', file, true)
-
-  expect(apiMock).toHaveBeenNthCalledWith(
-    1,
+  expect(apiMock).toHaveBeenCalledWith(
     `/events/event-uuid/signed-storage-url`,
     {
       method: 'put',
       body: JSON.stringify({
         visibility: 'private',
-        content_type: file.type,
+        content_type: 'text/plain',
       }),
     },
   )
 
-  expect(global.fetch).toHaveBeenCalledWith(
-    'https://mock-storage-url.com/upload',
-    {
-      method: 'put',
-      body: file,
-    },
+  expect(result).toEqual(signedUrlResponse.data)
+})
+
+test('saveTemporaryUpload()', async () => {
+  const temporaryUrlData = {
+    url: 'https://mock-storage-url.com/upload',
+    uuid: 'mock-uuid',
+    key: 'mock-key',
+    bucket: 'mock-bucket',
+  }
+
+  const attachmentResponse = {
+    data: { attachment: { id: 1, name: 'test.txt' } },
+  }
+  apiMock.mockResolvedValueOnce(attachmentResponse)
+
+  const result = await event.saveTemporaryUpload(
+    'event-uuid',
+    temporaryUrlData,
+    'test.txt',
+    123,
+    'text/plain',
+    true,
   )
 
-  expect(apiMock).toHaveBeenNthCalledWith(
-    2,
+  expect(apiMock).toHaveBeenCalledWith(
     `/events/event-uuid/create-temporary-upload`,
     {
       method: 'post',
@@ -74,9 +84,9 @@ test('saveTemporaryUpload()', async () => {
         uuid: 'mock-uuid',
         key: 'mock-key',
         bucket: 'mock-bucket',
-        name: file.name,
-        size: file.size,
-        content_type: file.type,
+        name: 'test.txt',
+        size: 123,
+        content_type: 'text/plain',
         custom_properties: { visibility: 'private' },
       }),
     },
