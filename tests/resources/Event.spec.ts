@@ -34,7 +34,11 @@ test('generateTemporaryUploadUrl()', async () => {
   }
   apiMock.mockResolvedValueOnce(signedUrlResponse)
 
-  const result = await event.generateTemporaryUploadUrl('event-uuid', 'text/plain', true)
+  const result = await event.generateTemporaryUploadUrl(
+    'event-uuid',
+    'text/plain',
+    true,
+  )
 
   expect(apiMock).toHaveBeenCalledWith(
     `/events/event-uuid/signed-storage-url`,
@@ -69,7 +73,7 @@ test('saveTemporaryUpload()', async () => {
     'test.txt',
     123,
     'text/plain',
-    true
+    true,
   )
 
   expect(apiMock).toHaveBeenCalledWith(

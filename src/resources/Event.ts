@@ -77,9 +77,8 @@ interface TemporaryUploadResponseInterface {
 }
 
 interface TemporaryUrlResponseInterface {
-  url: string,
-  uuid: string,
-  bucket: string,
-  key: string,
+  url: string
+  uuid: string
+  bucket: string
+  key: string
 }
-
