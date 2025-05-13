@@ -10,41 +10,48 @@ export const Event = class {
     return await Api.sendRequest(`/events/${uuid}`)
   }
 
-  public async saveTemporaryUpload(
+  public mapVisibility(isPrivate: boolean): string {
+    return isPrivate ? 'private' : 'public-read'
+  }
+
+  public async generateTemporaryUploadUrl(
     eventUuid: string,
-    file: File,
+    fileMimeType: string,
     isPrivate: boolean = true,
-  ): Promise<TemporaryUploadResponseInterface> {
-    const visibility = isPrivate ? 'private' : 'public-read'
+  ): Promise<TemporaryUrlResponseInterface> {
     const { data } = await Api.sendRequest(
       `/events/${eventUuid}/signed-storage-url`,
       {
         method: 'put',
         body: JSON.stringify({
-          visibility: visibility,
-          content_type: file.type,
+          visibility: this.mapVisibility(isPrivate),
+          content_type: fileMimeType,
         }),
       },
     )
-    const response = await fetch(data.url, {
-      method: 'put',
-      body: file,
-    })
-    if (!response.ok) {
-      throw new Error('Error during file upload')
-    }
+    return data
+  }
+
+  public async saveTemporaryUpload(
+    eventUuid: string,
+    temporaryUrlData: TemporaryUrlResponseInterface,
+    fileName: string,
+    fileSize: number,
+    fileMimeType: string,
+    isPrivate: boolean = true,
+  ): Promise<TemporaryUploadResponseInterface> {
     return await Api.sendRequest(
       `/events/${eventUuid}/create-temporary-upload`,
       {
         method: 'post',
         body: JSON.stringify({
-          uuid: data.uuid,
-          key: data.key,
-          bucket: data.bucket,
-          name: file.name,
-          size: file.size,
-          content_type: file.type,
-          custom_properties: { visibility: visibility },
+          uuid: temporaryUrlData.uuid,
+          key: temporaryUrlData.key,
+          bucket: temporaryUrlData.bucket,
+          name: fileName,
+          size: fileSize,
+          content_type: fileMimeType,
+          custom_properties: { visibility: this.mapVisibility(isPrivate) },
         }),
       },
     )
@@ -68,3 +75,11 @@ interface TemporaryUploadResponseInterface {
     temporary_upload: AttachmentInterface
   }
 }
+
+interface TemporaryUrlResponseInterface {
+  url: string,
+  uuid: string,
+  bucket: string,
+  key: string,
+}
+
