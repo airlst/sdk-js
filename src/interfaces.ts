@@ -76,7 +76,6 @@ export interface EmailTemplateInterface {
 export interface AttachmentInterface {
   file_name: string
   uuid: string
-  preview_url: string
   original_url: string
   extension: string
   size: number
