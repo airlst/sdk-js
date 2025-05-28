@@ -21,6 +21,7 @@ export interface GuestInterface {
   extended_fields: object
   booking: BookingInterface
   contact: ContactInterface
+  files: Array<AttachmentInterface>
   reservations: Array<ReservationInterface>
 }
 
