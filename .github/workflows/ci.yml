@@ -24,7 +24,7 @@ jobs:
           path: node_modules
           key: yarn-${{ hashFiles('yarn.lock') }}
       - name: Prepare Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Install dependencies
@@ -50,7 +50,7 @@ jobs:
           path: node_modules
           key: yarn-${{ hashFiles('yarn.lock') }}
       - name: Prepare Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Install dependencies
@@ -76,7 +76,7 @@ jobs:
           path: node_modules
           key: yarn-${{ hashFiles('yarn.lock') }}
       - name: Prepare Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Install dependencies
@@ -98,7 +98,7 @@ jobs:
           path: node_modules
           key: yarn-${{ hashFiles('yarn.lock') }}
       - name: Prepare Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Install dependencies
