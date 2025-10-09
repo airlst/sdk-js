@@ -8,4 +8,15 @@ import { Bookable } from './resources/Bookable'
 import { QueryBuilder, QueryParameters } from './utils/QueryBuilder'
 import { GuestManagerInterface } from './interfaces'
 
-export { Api, Event, Guest, GuestManager, EmailTemplate, Contact, Bookable, QueryBuilder, QueryParameters, GuestManagerInterface }
+export {
+  Api,
+  Event,
+  Guest,
+  GuestManager,
+  EmailTemplate,
+  Contact,
+  Bookable,
+  QueryBuilder,
+  QueryParameters,
+  GuestManagerInterface,
+}

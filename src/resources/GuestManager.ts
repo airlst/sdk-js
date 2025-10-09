@@ -4,7 +4,7 @@ import {
   CreateCompanionBodyInterface,
   UpdateBodyInterface,
   CheckinBodyInterface,
-  CreateRecommendationBodyInterface
+  CreateRecommendationBodyInterface,
 } from './Guest'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
 import { GuestManagerInterface, AttachmentInterface } from '../interfaces'

@@ -228,4 +228,5 @@ export interface CheckinBodyInterface {
   timestamp: number
 }
 
-export interface CreateRecommendationBodyInterface extends CreateMainBodyInterface {}
+export interface CreateRecommendationBodyInterface
+  extends CreateMainBodyInterface {}

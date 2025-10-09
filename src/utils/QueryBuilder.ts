@@ -15,7 +15,9 @@ export interface QueryParameters {
 }
 
 export class QueryBuilder {
-  public static buildQuery(parameters: QueryParameters): Record<string, string> {
+  public static buildQuery(
+    parameters: QueryParameters,
+  ): Record<string, string> {
     const filters = parameters.filters?.reduce(
       (carry, { field, operator, value }) => {
         carry[`filters(${field}*${operator || 'eq'})`] = value
