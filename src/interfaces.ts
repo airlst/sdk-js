@@ -23,6 +23,11 @@ export interface GuestInterface {
   contact: ContactInterface
   files: Array<AttachmentInterface>
   reservations: Array<ReservationInterface>
+  guest_managers: Array<GuestManagerInterface>
+}
+
+export interface GuestManagerInterface extends Omit<GuestInterface, 'guest_managers'> {
+  managed_guests: Array<GuestInterface>
 }
 
 export interface BookingInterface {

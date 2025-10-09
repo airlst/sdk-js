@@ -184,6 +184,56 @@ const { data } = await new Guest('event-uuid').createRecommendation('guest-code'
   })
 ```
 
+### GuestManager methods
+
+The GuestManager class provides the same functionality as Guest but is designed for managing guest managers. It has all the same methods as Guest, with the key difference being that the `list()` method uses a different endpoint and returns `GuestManagerInterface` objects which include a `managed_guests` array instead of `guest_managers`.
+
+#### List all guest managers
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const { data } = await new GuestManager('event-uuid').list({ page: 2, search: 'John' })
+```
+
+Method accepts the same parameters as Guest list method (see Guest methods section above).
+
+#### All other methods
+
+GuestManager supports all the same methods as Guest:
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+// Validate guest manager code
+const { data } = await new GuestManager('event-uuid').validateCode('guest-manager-code')
+
+// Get guest manager with code
+const { data } = await new GuestManager('event-uuid').get('guest-manager-code')
+
+// Create a new guest manager
+const { data } = await new GuestManager('event-uuid').create({
+  status: 'confirmed',
+  contact: {
+    first_name: 'John',
+    last_name: 'Doe',
+  }
+})
+
+// Update existing guest manager
+const { data } = await new GuestManager('event-uuid').update('guest-manager-code', { status: 'confirmed' })
+
+// Check in a guest manager
+const { data } = await new GuestManager('event-uuid').checkin('guest-manager-code', {
+  type: GuestManager.CheckinType.CHECK_IN,
+  device: 'Mobile',
+  location: 'Munich',
+  timestamp: Math.round(+new Date() / 1000),
+})
+
+// And all other methods: createCompanion, archive, restore, delete, createRecommendation, getAttachments, getAttachmentSignedUrl
+```
+
 ### Email Template methods
 
 #### Retrieve all email templates for the event
