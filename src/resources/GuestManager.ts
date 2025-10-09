@@ -1,13 +1,16 @@
-import { Api, PaginationInterface } from '../Api'
+import { Api } from '../Api'
 import {
-  GuestInterface,
-  BookingInterface,
-  ContactInterface,
-  AttachmentInterface,
-} from '../interfaces'
+  CreateMainBodyInterface,
+  CreateCompanionBodyInterface,
+  UpdateBodyInterface,
+  CheckinBodyInterface,
+  CreateRecommendationBodyInterface,
+} from './Guest'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
+import { GuestManagerInterface, AttachmentInterface } from '../interfaces'
+import { PaginationInterface } from '../Api'
 
-export const Guest = class {
+export const GuestManager = class {
   public eventId: string
 
   constructor(eventId: string) {
@@ -25,7 +28,7 @@ export const Guest = class {
     const queryString = QueryBuilder.buildQueryString(parameters)
 
     return await Api.sendRequest(
-      `/events/${this.eventId}/guests?${queryString}`,
+      `/events/${this.eventId}/guest_managers?${queryString}`,
     )
   }
 
@@ -144,7 +147,7 @@ export const Guest = class {
 
 interface ListResponseInterface {
   data: {
-    guests: Array<GuestInterface>
+    guests: Array<GuestManagerInterface>
   }
   meta?: {
     pagination: PaginationInterface
@@ -159,7 +162,7 @@ interface ValidateCodeResponseInterface {
 
 interface GetResponseInterface {
   data: {
-    guest: GuestInterface
+    guest: GuestManagerInterface
   }
 }
 
@@ -177,56 +180,30 @@ interface GetSignerUrlResponseInterface {
 
 interface CheckinResponseInterface {
   data: {
-    guest: GuestInterface
+    guest: GuestManagerInterface
   }
 }
 
 interface RestoreResponseInterface {
   data: {
-    guest: GuestInterface
+    guest: GuestManagerInterface
   }
 }
 
 interface CreateResponseInterface {
   data: {
-    guest: GuestInterface
+    guest: GuestManagerInterface
   }
 }
 
 interface CreateRecommendationResponseInterface {
   data: {
-    guest: GuestInterface
+    guest: GuestManagerInterface
   }
 }
 
 interface UpdateResponseInterface {
   data: {
-    guest: GuestInterface
+    guest: GuestManagerInterface
   }
 }
-
-export interface CreateMainBodyInterface extends CreateCompanionBodyInterface {
-  status: string
-}
-
-export interface CreateCompanionBodyInterface {
-  code: string
-  role: string
-  extended_fields: object
-  contact: ContactInterface
-  booking: BookingInterface
-}
-
-export interface UpdateBodyInterface {
-  status: string
-}
-
-export interface CheckinBodyInterface {
-  type: 'check-in' | 'check-out'
-  device?: string
-  location?: string
-  timestamp: number
-}
-
-export interface CreateRecommendationBodyInterface
-  extends CreateMainBodyInterface {}
