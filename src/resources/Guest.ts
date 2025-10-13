@@ -7,6 +7,10 @@ import {
 } from '../interfaces'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
 
+interface GuestListQueryParameters extends QueryParameters {
+  guest_manager_id?: string
+}
+
 export const Guest = class {
   public eventId: string
 
@@ -20,9 +24,15 @@ export const Guest = class {
   } as const
 
   public async list(
-    parameters: QueryParameters,
+    parameters: GuestListQueryParameters,
   ): Promise<ListResponseInterface> {
-    const queryString = QueryBuilder.buildQueryString(parameters)
+    const baseQuery = QueryBuilder.buildQuery(parameters)
+
+    if (parameters.guest_manager_id) {
+      baseQuery['guest_manager_id'] = parameters.guest_manager_id
+    }
+
+    const queryString = new URLSearchParams(baseQuery).toString()
 
     return await Api.sendRequest(
       `/events/${this.eventId}/guests?${queryString}`,
@@ -169,7 +179,7 @@ interface GetAttachmentsResponseInterface {
   }
 }
 
-interface GetSignerUrlResponseInterface {
+export interface GetSignerUrlResponseInterface {
   data: {
     url: string
   }
