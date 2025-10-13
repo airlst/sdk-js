@@ -1,8 +1,5 @@
 import { Api, PaginationInterface } from '../Api'
-import {
-  GuestManagerInterface,
-  AttachmentInterface,
-} from '../interfaces'
+import { GuestManagerInterface, AttachmentInterface } from '../interfaces'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
 import {
   CreateMainBodyInterface,
