@@ -29,7 +29,7 @@ test('list()', async () => {
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
-    `/events/event-uuid/guest_managers?${expectedQuery}`,
+    `/events/event-uuid/guests/guest-managers?${expectedQuery}`,
   )
 })
 

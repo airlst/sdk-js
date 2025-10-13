@@ -1,14 +1,17 @@
-import { Api } from '../Api'
+import { Api, PaginationInterface } from '../Api'
+import {
+  GuestManagerInterface,
+  AttachmentInterface,
+} from '../interfaces'
+import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
 import {
   CreateMainBodyInterface,
   CreateCompanionBodyInterface,
   UpdateBodyInterface,
   CheckinBodyInterface,
   CreateRecommendationBodyInterface,
+  GetSignerUrlResponseInterface,
 } from './Guest'
-import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
-import { GuestManagerInterface, AttachmentInterface } from '../interfaces'
-import { PaginationInterface } from '../Api'
 
 export const GuestManager = class {
   public eventId: string
@@ -24,11 +27,11 @@ export const GuestManager = class {
 
   public async list(
     parameters: QueryParameters,
-  ): Promise<ListResponseInterface> {
+  ): Promise<GuestManagerListResponseInterface> {
     const queryString = QueryBuilder.buildQueryString(parameters)
 
     return await Api.sendRequest(
-      `/events/${this.eventId}/guest_managers?${queryString}`,
+      `/events/${this.eventId}/guests/guest-managers?${queryString}`, // TODO change to guest-managers when backend is fixed
     )
   }
 
@@ -145,9 +148,9 @@ export const GuestManager = class {
   }
 }
 
-interface ListResponseInterface {
+interface GuestManagerListResponseInterface {
   data: {
-    guests: Array<GuestManagerInterface>
+    guest_managers: Array<GuestManagerInterface>
   }
   meta?: {
     pagination: PaginationInterface
@@ -169,12 +172,6 @@ interface GetResponseInterface {
 interface GetAttachmentsResponseInterface {
   data: {
     attachments: Array<AttachmentInterface>
-  }
-}
-
-interface GetSignerUrlResponseInterface {
-  data: {
-    url: string
   }
 }
 

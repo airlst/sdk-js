@@ -33,6 +33,31 @@ test('list()', async () => {
   )
 })
 
+test('list() with guest_manager_id', async () => {
+  guest.list({
+    page: 'p',
+    perPage: 'pp',
+    search: 's',
+    guest_manager_id: 'manager-123',
+    filters: [
+      { field: 'ff1', operator: 'fo1', value: 'fv1' },
+      { field: 'ff2', value: 'fv2' },
+    ],
+    sorts: [
+      { field: 'sf1', order: 'so1', direction: 'sd1' },
+      { field: 'sf2', direction: 'sd2' },
+    ],
+  })
+
+  const expectedQuery =
+    'page=p&per_page=pp&filters%28ff1*fo1%29=fv1&filters%28ff2*eq%29=fv2&sorts%28sf1*so1%29=sd1&sorts%28sf2*0%29=sd2&search=s&guest_manager_id=manager-123'
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    `/events/event-uuid/guests?${expectedQuery}`,
+  )
+})
+
 test('validateCode()', async () => {
   guest.validateCode('guest-code')
 

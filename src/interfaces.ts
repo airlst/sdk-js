@@ -26,8 +26,7 @@ export interface GuestInterface {
   guest_managers: Array<GuestManagerInterface>
 }
 
-export interface GuestManagerInterface
-  extends Omit<GuestInterface, 'guest_managers'> {
+export interface GuestManagerInterface extends Omit<GuestInterface, 'guest_managers'> {
   managed_guests: Array<GuestInterface>
 }
 
