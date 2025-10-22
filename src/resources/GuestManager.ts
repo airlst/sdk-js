@@ -66,11 +66,11 @@ export const GuestManager = class {
   public async create(
     body: CreateMainBodyInterface,
   ): Promise<CreateResponseInterface> {
-    body.role = 'guest_manager'
+    const requestBody = { ...body, role: 'guest_manager' }
 
     return await Api.sendRequest(`/events/${this.eventId}/guests`, {
       method: 'post',
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestBody),
     })
   }
 
