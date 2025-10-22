@@ -56,21 +56,8 @@ test('create()', async () => {
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests', {
     method: 'post',
-    body: '{"a":"b"}',
+    body: '{"a":"b","role":"guest_manager"}',
   })
-})
-
-test('createCompanion()', async () => {
-  guestManager.createCompanion('guest-code', { a: 'b' })
-
-  expect(apiMock).toHaveBeenCalledTimes(1)
-  expect(apiMock).toHaveBeenCalledWith(
-    '/events/event-uuid/guests/guest-code/companions',
-    {
-      method: 'post',
-      body: '{"a":"b"}',
-    },
-  )
 })
 
 test('update()', async () => {
@@ -126,19 +113,6 @@ test('checkin()', async () => {
     {
       method: 'post',
       body: JSON.stringify(requestBody),
-    },
-  )
-})
-
-test('createRecommendation()', async () => {
-  guestManager.createRecommendation('guest-code', { a: 'b' })
-
-  expect(apiMock).toHaveBeenCalledTimes(1)
-  expect(apiMock).toHaveBeenCalledWith(
-    '/events/event-uuid/guests/guest-code/recommendations',
-    {
-      method: 'post',
-      body: '{"a":"b"}',
     },
   )
 })

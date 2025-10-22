@@ -3,10 +3,8 @@ import { GuestManagerInterface, AttachmentInterface } from '../interfaces'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
 import {
   CreateMainBodyInterface,
-  CreateCompanionBodyInterface,
   UpdateBodyInterface,
   CheckinBodyInterface,
-  CreateRecommendationBodyInterface,
   GetSignerUrlResponseInterface,
 } from './Guest'
 
@@ -28,7 +26,7 @@ export const GuestManager = class {
     const queryString = QueryBuilder.buildQueryString(parameters)
 
     return await Api.sendRequest(
-      `/events/${this.eventId}/guests/guest-managers?${queryString}`, // TODO change to guest-managers when backend is fixed
+      `/events/${this.eventId}/guests/guest-managers?${queryString}`,
     )
   }
 
@@ -70,21 +68,8 @@ export const GuestManager = class {
   ): Promise<CreateResponseInterface> {
     return await Api.sendRequest(`/events/${this.eventId}/guests`, {
       method: 'post',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, role: 'guest_manager' }),
     })
-  }
-
-  public async createCompanion(
-    code: string,
-    body: CreateCompanionBodyInterface,
-  ): Promise<CreateResponseInterface> {
-    return await Api.sendRequest(
-      `/events/${this.eventId}/guests/${code}/companions`,
-      {
-        method: 'post',
-        body: JSON.stringify(body),
-      },
-    )
   }
 
   public async update(
@@ -124,19 +109,6 @@ export const GuestManager = class {
   ): Promise<CheckinResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guests/${code}/checkins`,
-      {
-        method: 'post',
-        body: JSON.stringify(body),
-      },
-    )
-  }
-
-  public async createRecommendation(
-    code: string,
-    body: CreateRecommendationBodyInterface,
-  ): Promise<CreateRecommendationResponseInterface> {
-    return await Api.sendRequest(
-      `/events/${this.eventId}/guests/${code}/recommendations`,
       {
         method: 'post',
         body: JSON.stringify(body),
@@ -185,12 +157,6 @@ interface RestoreResponseInterface {
 }
 
 interface CreateResponseInterface {
-  data: {
-    guest: GuestManagerInterface
-  }
-}
-
-interface CreateRecommendationResponseInterface {
   data: {
     guest: GuestManagerInterface
   }
