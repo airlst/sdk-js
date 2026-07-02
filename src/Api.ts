@@ -24,10 +24,10 @@ export const Api = class {
     }
   }
 
-  public static async sendRequest(
+  public static async sendRequest<T = ResponseInterface>(
     uri: string,
     options?: RequestInit,
-  ): Promise<ResponseInterface> {
+  ): Promise<T> {
     const response = await fetch(this.BASE_URL + uri, {
       headers: {
         ...Api.getRequestHeaders(),
@@ -44,7 +44,7 @@ export const Api = class {
       return await response.json()
     } catch {
       // If JSON parsing fails (empty body), just return
-      return {} as ResponseInterface
+      return {} as T
     }
   }
 }

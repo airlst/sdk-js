@@ -12,6 +12,9 @@ import {
   GuestGroupInterface,
   OrderInterface,
   OrderLineItemInterface,
+  GuestsImportInterface,
+  ImportableFieldInterface,
+  GuessImportFieldsResponseInterface,
 } from './interfaces'
 
 export {
@@ -29,4 +32,7 @@ export {
   GuestGroupInterface,
   OrderInterface,
   OrderLineItemInterface,
+  GuestsImportInterface,
+  ImportableFieldInterface,
+  GuessImportFieldsResponseInterface,
 }
