@@ -46,6 +46,28 @@ test('listAvailabilities()', async () => {
   )
 })
 
+test('listAvailabilities() with guest_code', async () => {
+  const requestBody = {
+    start_date: 'start-date',
+    end_date: 'end-date',
+    guest_code: 'ABCD1234',
+  }
+  await bookable.listAvailabilities(
+    'bookable-group-uuid',
+    'bookable-object-uuid',
+    requestBody,
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/groups/bookable-group-uuid/objects/bookable-object-uuid/availability',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
 test('createReservation()', async () => {
   const requestBody = {
     guest_code: 'ABC123',
