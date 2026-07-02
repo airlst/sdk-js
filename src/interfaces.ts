@@ -14,16 +14,28 @@ interface LocaleInterface {
   label: string
 }
 
+export interface GuestGroupInterface {
+  id: string
+  name: {
+    [locale: string]: string
+  }
+}
+
 export interface GuestInterface {
   code: string
   role: string
   status: string
   extended_fields: object
+  guest_group: GuestGroupInterface | null
   booking: BookingInterface
   contact: ContactInterface
   files: Array<AttachmentInterface>
   reservations: Array<ReservationInterface>
   guest_managers: Array<GuestManagerInterface>
+  main_guest?: GuestInterface
+  companion_guests?: Array<GuestInterface>
+  recommended_by?: GuestInterface
+  recommended_guests?: Array<GuestInterface>
 }
 
 export interface GuestManagerInterface

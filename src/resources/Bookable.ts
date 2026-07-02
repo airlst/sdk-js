@@ -86,6 +86,7 @@ interface ListBookablesResponseInterface {
 interface ListAvailabilitiesInterface {
   start_date: string
   end_date: string
+  guest_code?: string
 }
 
 interface ListAvailabilitiesResponseInterface {

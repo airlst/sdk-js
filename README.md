@@ -234,6 +234,19 @@ const { data } = await new GuestManager('event-uuid').checkin('guest-manager-cod
 // And all other methods: createCompanion, archive, restore, delete, createRecommendation, getAttachments, getAttachmentSignedUrl
 ```
 
+### GuestGroup methods
+
+#### List all guest groups
+
+Returns the array of guest groups directly (unwrapped). Each group's `name` is a locale→string map.
+
+```javascript
+import { GuestGroup } from '@airlst/sdk'
+
+const guestGroups = await new GuestGroup('event-uuid').list()
+// [{ id: '...', name: { 'en-GB': 'VIP', 'de-DE': 'VIP' } }, ...]
+```
+
 ### Email Template methods
 
 #### Retrieve all email templates for the event
@@ -323,7 +336,9 @@ import { Bookable } from '@airlst/sdk'
 
 const { data } = await new Bookable('event-uuid').listAvailabilities('bookable-group-uuid', 'bookable-object-uuid', {
   start_date: '2025-01-02',
-  end_date: '2025-02-03'
+  end_date: '2025-02-03',
+  // Optional: resolve the guest's group to compute guest-specific remaining capacity
+  guest_code: 'guest-code'
 })
 ```
 
