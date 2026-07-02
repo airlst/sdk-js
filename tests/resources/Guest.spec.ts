@@ -207,10 +207,13 @@ test('uploadImportFile()', async () => {
 
   // Signed storage url requested through Api (Event.generateTemporaryUploadUrl)
   expect(apiMock).toHaveBeenCalledTimes(1)
-  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/signed-storage-url', {
-    method: 'put',
-    body: JSON.stringify({ visibility: 'private', content_type: 'text/csv' }),
-  })
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/signed-storage-url',
+    {
+      method: 'put',
+      body: JSON.stringify({ visibility: 'private', content_type: 'text/csv' }),
+    },
+  )
 
   // Raw bytes PUT directly to the signed url with the flattened headers
   expect(fetch.requests().length).toEqual(1)
@@ -218,7 +221,9 @@ test('uploadImportFile()', async () => {
   expect(request.url).toEqual('https://mock-storage-url.com/upload')
   expect(request.method).toEqual('PUT')
   expect(request.headers.get('x-amz-acl')).toEqual('private')
-  expect(request.headers.get('content-type')).toEqual('application/octet-stream')
+  expect(request.headers.get('content-type')).toEqual(
+    'application/octet-stream',
+  )
 
   // Resolves to the private key to hand to guessImportFields / processImport
   expect(key).toEqual('mock-key')
