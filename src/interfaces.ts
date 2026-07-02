@@ -160,3 +160,29 @@ export interface AvailabilityInterface {
   min: number
   max: number
 }
+
+export interface ImportableFieldInterface {
+  key: string
+  label: string
+}
+
+export interface GuestsImportInterface {
+  id: string
+  event_id: string
+  user_id: string | null
+  rows: number
+  status: 'created' | 'dispatched' | 'done'
+  batch_id: string | null
+  cloud_output_path: string | null
+  temporary_cloud_output_url: string | null
+  created_at: string
+}
+
+// Spec schema: GuessImportFieldsResponse
+export interface GuessImportFieldsResponseInterface {
+  available_fields: Array<ImportableFieldInterface>
+  possible_fields: Array<string | null>
+  header: Array<string>
+  preview_values: Array<Array<string>>
+  number_of_rows: number
+}

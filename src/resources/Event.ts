@@ -18,7 +18,7 @@ export const Event = class {
     eventUuid: string,
     fileMimeType: string,
     isPrivate: boolean = true,
-  ): Promise<TemporaryUrlResponseInterface> {
+  ): Promise<SignedStorageUrlResponseInterface> {
     const { data } = await Api.sendRequest(
       `/events/${eventUuid}/signed-storage-url`,
       {
@@ -81,4 +81,13 @@ interface TemporaryUrlResponseInterface {
   uuid: string
   bucket: string
   key: string
+}
+
+// Returned by getSignedStorageUrl (PUT /events/{EventUuid}/signed-storage-url).
+// Superset of TemporaryUrlResponseInterface: adds the headers that must be sent
+// with the raw file PUT to the signed url. Widening the return type is
+// backward-compatible for existing consumers of generateTemporaryUploadUrl.
+export interface SignedStorageUrlResponseInterface
+  extends TemporaryUrlResponseInterface {
+  headers: Record<string, string | string[]>
 }

@@ -30,6 +30,11 @@ test('generateTemporaryUploadUrl()', async () => {
       uuid: 'mock-uuid',
       key: 'mock-key',
       bucket: 'mock-bucket',
+      headers: {
+        Host: ['mock-storage-url.com'],
+        'x-amz-acl': ['private'],
+        'Content-Type': 'application/octet-stream',
+      },
     },
   }
   apiMock.mockResolvedValueOnce(signedUrlResponse)
