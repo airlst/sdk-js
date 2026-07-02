@@ -135,6 +135,24 @@ export interface ReservationInterface {
   bookable: CarBookableInterface
 }
 
+export interface OrderInterface {
+  id: string
+  status: string
+  line_items: Array<OrderLineItemInterface>
+  reservations: Array<ReservationInterface>
+  created_at: string
+  updated_at: string
+}
+
+export interface OrderLineItemInterface {
+  id: string
+  addon_id: string
+  guest_code: string
+  start_at: string | null
+  end_at: string | null
+  quantity: number
+}
+
 export interface AvailabilityInterface {
   starts_at: string
   ends_at: string
