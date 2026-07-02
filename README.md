@@ -366,3 +366,53 @@ import { Bookable } from '@airlst/sdk'
 
 await new Bookable('event-uuid').deleteReservation('guest-code', 'reservation-uuid')
 ```
+
+#### Get or create a booking's CART carrier order
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+const { data } = await new Bookable('event-uuid').createOrder({
+  booking_id: 'booking-uuid'
+})
+```
+
+#### Get list of a booking's CART carrier orders
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+const { data } = await new Bookable('event-uuid').listOrders('booking-uuid')
+```
+
+#### Show a carrier order with its line items and add-on reservations
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+const { data } = await new Bookable('event-uuid').getOrder('order-uuid')
+```
+
+#### Add an add-on allocation line item to a carrier order
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+const { data } = await new Bookable('event-uuid').addOrderLineItem('order-uuid', {
+  guest_code: 'guest-code',
+  addon_id: 'addon-uuid',
+  // Required unless the add-on has a FIXED availability type
+  start_at: '2026-06-03',
+  end_at: '2026-06-06',
+  quantity: 1
+})
+// data.reservation_ids => ['reservation-uuid', ...]
+```
+
+#### Delete an add-on allocation line item and release its contingent
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+await new Bookable('event-uuid').deleteOrderLineItem('order-uuid', 'line-item-uuid')
+```

@@ -7,7 +7,12 @@ import { GuestGroup } from './resources/GuestGroup'
 import { Contact } from './resources/Contact'
 import { Bookable } from './resources/Bookable'
 import { QueryBuilder, QueryParameters } from './utils/QueryBuilder'
-import { GuestManagerInterface, GuestGroupInterface } from './interfaces'
+import {
+  GuestManagerInterface,
+  GuestGroupInterface,
+  OrderInterface,
+  OrderLineItemInterface,
+} from './interfaces'
 
 export {
   Api,
@@ -22,4 +27,6 @@ export {
   QueryParameters,
   GuestManagerInterface,
   GuestGroupInterface,
+  OrderInterface,
+  OrderLineItemInterface,
 }

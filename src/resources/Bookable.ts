@@ -3,6 +3,7 @@ import {
   AvailabilityInterface,
   BookableGroupInterface,
   CarBookableInterface,
+  OrderInterface,
   ReservationInterface,
 } from '../interfaces'
 
@@ -63,6 +64,60 @@ export const Bookable = class {
       },
     )
   }
+
+  public async createOrder(
+    body: CreateOrderInterface,
+  ): Promise<CreateOrderResponseInterface> {
+    return await Api.sendRequest(`/events/${this.eventId}/bookables/orders`, {
+      method: 'post',
+      body: JSON.stringify(body),
+    })
+  }
+
+  public async listOrders(
+    bookingId: string,
+  ): Promise<ListOrdersResponseInterface> {
+    const queryString = new URLSearchParams({
+      booking_id: bookingId,
+    }).toString()
+
+    return await Api.sendRequest(
+      `/events/${this.eventId}/bookables/orders?${queryString}`,
+    )
+  }
+
+  public async getOrder(
+    orderUuid: string,
+  ): Promise<ShowOrderResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/bookables/orders/${orderUuid}`,
+    )
+  }
+
+  public async addOrderLineItem(
+    orderUuid: string,
+    body: AddOrderLineItemInterface,
+  ): Promise<AddOrderLineItemResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/bookables/orders/${orderUuid}/line-items`,
+      {
+        method: 'post',
+        body: JSON.stringify(body),
+      },
+    )
+  }
+
+  public async deleteOrderLineItem(
+    orderUuid: string,
+    lineItemUuid: string,
+  ): Promise<void> {
+    await Api.sendRequest(
+      `/events/${this.eventId}/bookables/orders/${orderUuid}/line-items/${lineItemUuid}`,
+      {
+        method: 'delete',
+      },
+    )
+  }
 }
 
 interface ListGroupsResponseInterface {
@@ -107,5 +162,35 @@ interface CreateReservationInterface {
 interface CreateReservationResponseInterface {
   data: {
     reservation: ReservationInterface
+  }
+}
+
+interface CreateOrderInterface {
+  booking_id: string
+}
+
+interface AddOrderLineItemInterface {
+  guest_code: string
+  addon_id: string
+  start_at?: string
+  end_at?: string
+  quantity: number
+}
+
+interface CreateOrderResponseInterface {
+  data: OrderInterface
+}
+
+interface ListOrdersResponseInterface {
+  data: Array<OrderInterface>
+}
+
+interface ShowOrderResponseInterface {
+  data: OrderInterface
+}
+
+interface AddOrderLineItemResponseInterface {
+  data: {
+    reservation_ids: Array<string>
   }
 }

@@ -102,3 +102,66 @@ test('deleteReservation()', async () => {
     },
   )
 })
+
+test('createOrder()', async () => {
+  const requestBody = {
+    booking_id: 'booking-uuid',
+  }
+  await bookable.createOrder(requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/bookables/orders', {
+    method: 'post',
+    body: JSON.stringify(requestBody),
+  })
+})
+
+test('listOrders()', async () => {
+  await bookable.listOrders('booking-uuid')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/orders?booking_id=booking-uuid',
+  )
+})
+
+test('getOrder()', async () => {
+  await bookable.getOrder('order-uuid')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/orders/order-uuid',
+  )
+})
+
+test('addOrderLineItem()', async () => {
+  const requestBody = {
+    guest_code: 'ABC123',
+    addon_id: '68076f81-4598-8009-b047-82e482892527',
+    start_at: '2026-06-03',
+    end_at: '2026-06-06',
+    quantity: 1,
+  }
+  await bookable.addOrderLineItem('order-uuid', requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/orders/order-uuid/line-items',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
+test('deleteOrderLineItem()', async () => {
+  await bookable.deleteOrderLineItem('order-uuid', 'line-item-uuid')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/orders/order-uuid/line-items/line-item-uuid',
+    {
+      method: 'delete',
+    },
+  )
+})
