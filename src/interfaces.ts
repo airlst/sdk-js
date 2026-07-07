@@ -43,6 +43,16 @@ export interface GuestManagerInterface
   managed_guests: Array<GuestInterface>
 }
 
+export interface QuotaIncreaseRequestInterface {
+  id: string
+  guest_group_id: string
+  requested_by_guest_manager_id: string
+  requested_amount: number
+  status: 'requested' | 'approved' | 'rejected'
+  created_at: string
+  resolved_at: string | null
+}
+
 export interface BookingInterface {
   extended_fields: object
 }
