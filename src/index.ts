@@ -10,6 +10,7 @@ import { QueryBuilder, QueryParameters } from './utils/QueryBuilder'
 import {
   GuestManagerInterface,
   GuestGroupInterface,
+  QuotaIncreaseRequestInterface,
   OrderInterface,
   OrderLineItemInterface,
   GuestsImportInterface,
@@ -30,6 +31,7 @@ export {
   QueryParameters,
   GuestManagerInterface,
   GuestGroupInterface,
+  QuotaIncreaseRequestInterface,
   OrderInterface,
   OrderLineItemInterface,
   GuestsImportInterface,
