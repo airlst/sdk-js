@@ -165,3 +165,74 @@ test('deleteOrderLineItem()', async () => {
     },
   )
 })
+
+test('assignBookables()', async () => {
+  const requestBody = {
+    guests: ['ABCD1234', 'ABCD2345'],
+    bookable_group_id: 'bookable-group-uuid',
+    selected_bookable_objects: ['bookable-object-uuid'],
+    selected_slots: [
+      {
+        bookable_id: 'bookable-object-uuid',
+        start_at: '2026-06-03 09:00:00',
+        end_at: '2026-06-03 09:30:00',
+      },
+    ],
+  }
+  await bookable.assignBookables(requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
+test('assignBookables() with guests: all and filters', async () => {
+  const requestBody = {
+    guests: 'all',
+    filters: {
+      status: 'confirmed',
+      guest_group_id: 'guest-group-uuid',
+    },
+    bookable_group_id: 'bookable-group-uuid',
+    selected_bookable_objects: ['bookable-object-uuid'],
+    start_date: '2026-06-03',
+    end_date: '2026-06-06',
+  }
+  await bookable.assignBookables(requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
+test('assignBookables() rejects on 422 validation error', async () => {
+  const response = new Response('{}', { status: 422 })
+  apiMock.mockRejectedValueOnce(response)
+
+  const requestBody = {
+    guests: [],
+    bookable_group_id: 'bookable-group-uuid',
+    selected_bookable_objects: ['bookable-object-uuid'],
+  }
+
+  await expect(bookable.assignBookables(requestBody)).rejects.toBe(response)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})

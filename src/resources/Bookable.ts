@@ -118,6 +118,13 @@ export const Bookable = class {
       },
     )
   }
+
+  public async assignBookables(body: AssignBookablesInterface): Promise<void> {
+    await Api.sendRequest(`/events/${this.eventId}/bookables/assignments`, {
+      method: 'post',
+      body: JSON.stringify(body),
+    })
+  }
 }
 
 interface ListGroupsResponseInterface {
@@ -193,4 +200,30 @@ interface AddOrderLineItemResponseInterface {
   data: {
     reservation_ids: Array<string>
   }
+}
+
+interface AssignBookablesInterface {
+  guests: 'all' | Array<string>
+  filters?: {
+    status?:
+      | 'listed'
+      | 'invited'
+      | 'requested'
+      | 'waitlisted'
+      | 'confirmed'
+      | 'cancelled'
+      | 'declined'
+      | 'unpaid'
+      | 'checkout'
+    guest_group_id?: string
+  }
+  bookable_group_id: string
+  selected_bookable_objects: Array<string>
+  selected_slots?: Array<{
+    bookable_id: string
+    start_at: string
+    end_at: string
+  }>
+  start_date?: string
+  end_date?: string
 }

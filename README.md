@@ -435,3 +435,35 @@ import { Bookable } from '@airlst/sdk'
 
 await new Bookable('event-uuid').deleteOrderLineItem('order-uuid', 'line-item-uuid')
 ```
+
+#### Bulk-assign an add-on to many guests
+
+Assigns a single add-on selection to many guests at once. Processing is asynchronous, so the call resolves with no content once the batch has been queued.
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+await new Bookable('event-uuid').assignBookables({
+  // Either an explicit list of guest codes, or the string 'all'
+  guests: ['ABCD1234', 'ABCD2345'],
+  // Optional: only applied when guests is 'all'
+  filters: {
+    status: 'confirmed',
+    guest_group_id: 'guest-group-uuid'
+  },
+  bookable_group_id: 'bookable-group-uuid',
+  // Must also include every flexible add-on referenced in selected_slots
+  selected_bookable_objects: ['bookable-object-uuid'],
+  // For FLEXIBLE add-ons: one reservation is created per slot
+  selected_slots: [
+    {
+      bookable_id: 'bookable-object-uuid',
+      start_at: '2026-06-03 09:00:00',
+      end_at: '2026-06-03 09:30:00'
+    }
+  ],
+  // Required when a NIGHTS add-on is selected (end_date = excluded check-out day)
+  start_date: '2026-06-03',
+  end_date: '2026-06-06'
+})
+```
