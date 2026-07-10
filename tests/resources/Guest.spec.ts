@@ -108,6 +108,32 @@ test('update()', async () => {
   })
 })
 
+test('updateGuests()', async () => {
+  const body = { guests: ['ABCD1234', 'ABCD2345'], status: 'confirmed' }
+  guest.updateGuests(body)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests', {
+    method: 'put',
+    body: JSON.stringify(body),
+  })
+})
+
+test('updateGuests() with "all" and filters', async () => {
+  const body = {
+    guests: 'all',
+    filters: { status: 'invited' },
+    status: 'confirmed',
+  }
+  guest.updateGuests(body)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests', {
+    method: 'put',
+    body: JSON.stringify(body),
+  })
+})
+
 test('archive()', async () => {
   guest.archive('guest-code')
 
