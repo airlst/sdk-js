@@ -133,6 +133,25 @@ import { Guest } from '@airlst/sdk'
 const { data } = await new Guest('event-uuid').update('guest-code', { status: 'confirmed' })
 ```
 
+#### Update multiple guests
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+// Target specific guests by code
+await new Guest('event-uuid').updateGuests({
+  guests: ['ABCD1234', 'ABCD2345'],
+  status: 'confirmed',
+})
+
+// Or target every guest, optionally narrowed by filters
+await new Guest('event-uuid').updateGuests({
+  guests: 'all',
+  filters: { status: 'invited' },
+  status: 'confirmed',
+})
+```
+
 #### Archive guest
 
 ```javascript

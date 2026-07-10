@@ -129,6 +129,13 @@ export const Guest = class {
     })
   }
 
+  public async updateGuests(body: UpdateGuestsBodyInterface): Promise<void> {
+    await Api.sendRequest(`/events/${this.eventId}/guests`, {
+      method: 'put',
+      body: JSON.stringify(body),
+    })
+  }
+
   public async archive(code: string): Promise<void> {
     await Api.sendRequest(`/events/${this.eventId}/guests/${code}/archive`, {
       method: 'put',
@@ -318,6 +325,24 @@ export interface CreateCompanionBodyInterface {
 
 export interface UpdateBodyInterface {
   status: string
+}
+
+export interface UpdateGuestsBodyInterface {
+  guests: 'all' | Array<string>
+  filters?: {
+    status?: string
+    guest_group_id?: string
+  }
+  status?: string
+  guest_group_id?: string
+  max_companions?: number
+  max_recommendations?: number
+  marketing_opt_in?: boolean
+  guest_managers?: Array<string>
+  extended_fields?: object
+  booking?: BookingInterface
+  contact?: ContactInterface
+  send_automated_email?: boolean
 }
 
 export interface CheckinBodyInterface {
