@@ -6,6 +6,11 @@ import { GuestManager } from './resources/GuestManager'
 import { GuestGroup } from './resources/GuestGroup'
 import { Contact } from './resources/Contact'
 import { Bookable } from './resources/Bookable'
+import {
+  SecureLogin,
+  IssueLoginCodeResponseInterface,
+  VerifyLoginCodeResponseInterface,
+} from './resources/SecureLogin'
 import { QueryBuilder, QueryParameters } from './utils/QueryBuilder'
 import {
   GuestManagerInterface,
@@ -27,6 +32,9 @@ export {
   EmailTemplate,
   Contact,
   Bookable,
+  SecureLogin,
+  IssueLoginCodeResponseInterface,
+  VerifyLoginCodeResponseInterface,
   QueryBuilder,
   QueryParameters,
   GuestManagerInterface,
