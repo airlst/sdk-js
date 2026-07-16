@@ -28,10 +28,13 @@ export const SecureLogin = class {
     otp: string,
     nonce?: string,
   ): Promise<VerifyLoginCodeResponseInterface> {
-    return await Api.sendRequest(`/events/${this.eventId}/secure-login/verify`, {
-      method: 'post',
-      body: JSON.stringify({ code, otp, nonce }),
-    })
+    return await Api.sendRequest(
+      `/events/${this.eventId}/secure-login/verify`,
+      {
+        method: 'post',
+        body: JSON.stringify({ code, otp, nonce }),
+      },
+    )
   }
 }
 
