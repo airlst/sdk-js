@@ -11,6 +11,11 @@ export const SecureLogin = class {
   // The destination address is resolved server-side; nothing sensitive is
   // returned. `nonce` (optional) binds the code to the caller's session for
   // cross-session replay protection.
+  //
+  // Note: an unknown code or a guest with no email on file comes back as a
+  // thrown HTTP error (404 / 422), not an in-band `{ sent: false }` — the
+  // `{ sent: false }` shape is only used for the `cooldown` case, so callers
+  // should catch rejections.
   public async issue(
     code: string,
     nonce?: string,

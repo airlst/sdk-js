@@ -10,7 +10,7 @@ afterEach(() => {
 })
 
 test('issue()', async () => {
-  secureLogin.issue('guest-code')
+  await secureLogin.issue('guest-code')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
@@ -20,7 +20,7 @@ test('issue()', async () => {
 })
 
 test('issue() with nonce', async () => {
-  secureLogin.issue('guest-code', 'session-abc')
+  await secureLogin.issue('guest-code', 'session-abc')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
@@ -30,7 +30,7 @@ test('issue() with nonce', async () => {
 })
 
 test('verify()', async () => {
-  secureLogin.verify('guest-code', '123456')
+  await secureLogin.verify('guest-code', '123456')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
@@ -40,7 +40,7 @@ test('verify()', async () => {
 })
 
 test('verify() with nonce', async () => {
-  secureLogin.verify('guest-code', '123456', 'session-abc')
+  await secureLogin.verify('guest-code', '123456', 'session-abc')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
   expect(apiMock).toHaveBeenCalledWith(
