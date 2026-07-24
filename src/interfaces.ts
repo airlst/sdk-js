@@ -164,9 +164,19 @@ export interface OrderLineItemInterface {
   quantity: number
 }
 
+export interface PriceInterface {
+  net: number
+  gross: number
+  vat: number
+  vat_rate: number
+}
+
 export interface AvailabilityInterface {
   starts_at: string
   ends_at: string
+  per_night_total_capacity: Record<string, Record<string, number>> | null
+  per_night_remaining_capacity: Record<string, Record<string, number>> | null
+  per_night_price: Record<string, Record<string, PriceInterface>> | null
   buffer_time: number
   min: number
   max: number
