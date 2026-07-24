@@ -22,6 +22,7 @@ export interface GuestGroupInterface {
 }
 
 export interface GuestInterface {
+  id: string
   code: string
   role: string
   status: string
