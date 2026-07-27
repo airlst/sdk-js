@@ -313,14 +313,31 @@ interface UpdateResponseInterface {
 
 export interface CreateMainBodyInterface extends CreateCompanionBodyInterface {
   status: string
+  // Links the guest to an existing contact of the event's company instead of
+  // creating a new one. Mutually exclusive with `contact` — sending both is a
+  // 422. To also correct the contact data, follow up with update().
+  // Accepted only by POST /events/{event}/guests, so it is subtracted from
+  // CreateRecommendationBodyInterface below. GuestManager.create() posts to
+  // that same endpoint, so it accepts contact_id too.
+  contact_id?: string
+  companions?: Array<CreateNestedCompanionBodyInterface>
 }
 
 export interface CreateCompanionBodyInterface {
-  code: string
-  role: string
-  extended_fields: object
-  contact: ContactInterface
-  booking: BookingInterface
+  code?: string
+  role?: string
+  extended_fields?: object
+  contact?: ContactInterface
+  booking?: BookingInterface
+}
+
+// A companion sent inline in the create() payload. Unlike createCompanion(),
+// this path accepts contact_id (companions.*.contact_id on the API).
+export interface CreateNestedCompanionBodyInterface
+  extends CreateCompanionBodyInterface {
+  status?: string
+  send_automated_email?: boolean
+  contact_id?: string
 }
 
 export interface UpdateBodyInterface {
@@ -352,8 +369,10 @@ export interface CheckinBodyInterface {
   timestamp: number
 }
 
+// POST /guests/{code}/recommendations accepts neither contact_id nor inline
+// companions, so both are subtracted from the inherited create body.
 export interface CreateRecommendationBodyInterface
-  extends CreateMainBodyInterface {}
+  extends Omit<CreateMainBodyInterface, 'contact_id' | 'companions'> {}
 
 // Envelopes below mirror the spec exactly and are intentionally not normalized:
 // guessImportFields and processImport return top-level objects (no `data`
