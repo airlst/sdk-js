@@ -8,6 +8,12 @@ import {
   GetSignerUrlResponseInterface,
 } from './Guest'
 
+// Guest managers are created through POST /events/{event}/guests with the role
+// forced, so contact_id applies — but the API prohibits companions for that
+// role, so the inline companions field is subtracted.
+export interface CreateGuestManagerBodyInterface
+  extends Omit<CreateMainBodyInterface, 'companions'> {}
+
 export const GuestManager = class {
   public eventId: string
 
@@ -64,7 +70,7 @@ export const GuestManager = class {
   }
 
   public async create(
-    body: CreateMainBodyInterface,
+    body: CreateGuestManagerBodyInterface,
   ): Promise<CreateResponseInterface> {
     return await Api.sendRequest(`/events/${this.eventId}/guests`, {
       method: 'post',

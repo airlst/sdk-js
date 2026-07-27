@@ -1,6 +1,6 @@
 {
   "name": "@airlst/sdk",
-  "version": "0.0.24-beta7",
+  "version": "0.0.24-beta8",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/airlst/sdk-js.git"

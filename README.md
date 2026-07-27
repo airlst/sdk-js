@@ -112,6 +112,33 @@ const { data } = await new Guest('event-uuid').create({
 })
 ```
 
+#### Create a guest linked to an existing contact
+
+Pass `contact_id` instead of `contact` to attach the guest to a contact that
+already exists, rather than creating a new one. The contact must belong to the
+event's company.
+
+`contact_id` and `contact` are mutually exclusive — sending both fails
+validation. To correct the contact's data as well, create the guest and then
+call `update()` with the `contact` fields.
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').create({
+  status: 'confirmed',
+  contact_id: 'contact-uuid',
+  companions: [
+    { contact_id: 'another-contact-uuid' },
+    { contact: { first_name: 'Jane', last_name: 'Doe' } },
+  ]
+})
+```
+
+`GuestManager.create()` accepts `contact_id` as well. It is **not** accepted by
+`createCompanion()` or `createRecommendation()` — those endpoints do not
+support it.
+
 #### Create a new companion guest
 
 ```javascript

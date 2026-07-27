@@ -60,6 +60,16 @@ test('create()', async () => {
   })
 })
 
+test('create() with contact_id', async () => {
+  guestManager.create({ status: 'confirmed', contact_id: 'contact-uuid' })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests', {
+    method: 'post',
+    body: '{"status":"confirmed","contact_id":"contact-uuid","role":"guest_manager"}',
+  })
+})
+
 test('update()', async () => {
   guestManager.update('guest-code', { a: 'b' })
 
