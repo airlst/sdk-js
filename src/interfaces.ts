@@ -66,6 +66,7 @@ export interface ContactInterface {
   last_name: string
   email: string
   phone: string
+  mobile: string
   company_name: string
   job_title: string
   address_line_1: string

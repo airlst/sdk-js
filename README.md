@@ -341,6 +341,26 @@ import { Contact } from '@airlst/sdk'
 const { data } = await new Contact().getEvents('contact-code')
 ```
 
+#### Update contact master data
+
+Updates a contact's master data by code — native fields and `extended_fields` —
+without creating a guest or registration. All fields are optional: native
+fields are overwritten when present, and `extended_fields` are merged key by
+key (existing keys are preserved). Returns the updated contact, same shape as
+`get()`.
+
+```javascript
+import { Contact } from '@airlst/sdk'
+
+const { data } = await new Contact().update('contact-code', {
+  contact: {
+    first_name: 'Jane',
+    mobile: '+4915212345678',
+    extended_fields: { stammdaten_saved: true },
+  },
+})
+```
+
 #### Get all guest attachments
 
 ```javascript
