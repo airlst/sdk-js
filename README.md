@@ -114,20 +114,24 @@ const { data } = await new Guest('event-uuid').create({
 
 #### Create a guest linked to an existing contact
 
-Pass `contact_id` instead of `contact` to attach the guest to a contact that
-already exists, rather than creating a new one. The contact must belong to the
-event's company.
+Pass `contact_id` **or** `contact_code` instead of `contact` to attach the guest
+to a contact that already exists, rather than creating a new one. The contact
+must belong to the event's company.
 
-`contact_id` and `contact` are mutually exclusive — sending both fails
-validation. To correct the contact's data as well, create the guest and then
-call `update()` with the `contact` fields.
+Use `contact_code` when you authenticated the contact by code and never resolved
+its id — it is the same code `Contact.get()` takes and returns. Otherwise use
+`contact_id`, which `Contact.get()` also returns as `data.contact.id`.
+
+`contact`, `contact_id` and `contact_code` are mutually exclusive — sending any
+pair fails validation. To correct the contact's data as well, create the guest
+and then call `update()` with the `contact` fields.
 
 ```javascript
 import { Guest } from '@airlst/sdk'
 
 const { data } = await new Guest('event-uuid').create({
   status: 'confirmed',
-  contact_id: 'contact-uuid',
+  contact_code: 'QOI1U9GX',
   companions: [
     { contact_id: 'another-contact-uuid' },
     { contact: { first_name: 'Jane', last_name: 'Doe' } },
@@ -135,9 +139,9 @@ const { data } = await new Guest('event-uuid').create({
 })
 ```
 
-`GuestManager.create()` accepts `contact_id` as well. It is **not** accepted by
+`GuestManager.create()` accepts both as well. Neither is accepted by
 `createCompanion()` or `createRecommendation()` — those endpoints do not
-support it.
+support them.
 
 #### Create a new companion guest
 

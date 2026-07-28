@@ -58,23 +58,29 @@ export interface BookingInterface {
   extended_fields: object
 }
 
+// Used both as a response shape and as a request body (guest create/update,
+// Contact.update), so every field is optional: the API treats them as nullable
+// and callers routinely send a partial object.
 export interface ContactInterface {
-  code: string
-  sex: string
-  full_name: string
-  first_name: string
-  last_name: string
-  email: string
-  phone: string
-  mobile: string
-  company_name: string
-  job_title: string
-  address_line_1: string
-  address_line_2: string
-  zip: string
-  city: string
-  country: string
-  extended_fields: object
+  // Response only. Pass it back as `contact_id` on guest creation to link the
+  // new guest to this contact instead of creating a duplicate.
+  id?: string
+  code?: string
+  sex?: string
+  full_name?: string
+  first_name?: string
+  last_name?: string
+  email?: string
+  phone?: string
+  mobile?: string
+  company_name?: string
+  job_title?: string
+  address_line_1?: string
+  address_line_2?: string
+  zip?: string
+  city?: string
+  country?: string
+  extended_fields?: object
 }
 
 export interface EmailTemplateInterface {

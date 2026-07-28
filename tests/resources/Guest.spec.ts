@@ -112,6 +112,30 @@ test('create() with contact_id on nested companions', async () => {
   })
 })
 
+test('create() with contact_code', async () => {
+  guest.create({ status: 'confirmed', contact_code: 'QOI1U9GX' })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests', {
+    method: 'post',
+    body: '{"status":"confirmed","contact_code":"QOI1U9GX"}',
+  })
+})
+
+test('create() with contact_code on nested companions', async () => {
+  guest.create({
+    status: 'confirmed',
+    contact_code: 'QOI1U9GX',
+    companions: [{ contact_code: 'IJKL9012' }],
+  })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests', {
+    method: 'post',
+    body: '{"status":"confirmed","contact_code":"QOI1U9GX","companions":[{"contact_code":"IJKL9012"}]}',
+  })
+})
+
 test('createCompanion()', async () => {
   guest.createCompanion('guest-code', { a: 'b' })
 
