@@ -34,3 +34,19 @@ test('getEvents()', async () => {
     '/companies/contacts/contact-code/events',
   )
 })
+
+test('update()', async () => {
+  contact.update('contact-code', {
+    contact: {
+      first_name: 'Jane',
+      mobile: '+4915212345678',
+      extended_fields: { stammdaten_saved: true },
+    },
+  })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/companies/contacts/contact-code', {
+    method: 'put',
+    body: '{"contact":{"first_name":"Jane","mobile":"+4915212345678","extended_fields":{"stammdaten_saved":true}}}',
+  })
+})
