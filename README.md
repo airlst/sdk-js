@@ -421,9 +421,16 @@ const { data } = await new Bookable('event-uuid').createReservation('bookable-gr
     guest_code: 'guest-code',
     reservations: [
       {
+        bookable_id: 'bookable-object-uuid',
+        // Required unless the bookable is an add-on with a FIXED availability type, which has no
+        // date window. For those, omit both — any dates sent are ignored and the reservation is
+        // stored without them.
         starts_at: '2025-02-04 13:20:00',
         ends_at: '2025-02-04 13:40:00',
-        bookable_id: 'bookable-object-uuid'
+        quantity: 1,
+        // Reservation-scoped extended fields, keyed by field key. Only keys defined on the
+        // bookable group for the `bookableReservation` model are accepted.
+        extended_fields: { test_field: 'probeA123' }
       }
     ]
 })
@@ -474,7 +481,12 @@ const { data } = await new Bookable('event-uuid').addOrderLineItem('order-uuid',
   // Required unless the add-on has a FIXED availability type
   start_at: '2026-06-03',
   end_at: '2026-06-06',
-  quantity: 1
+  quantity: 1,
+  // Reservation-scoped extended fields, keyed by field key. Only keys defined on the add-on's
+  // bookable group for the `bookableReservation` model are accepted, and each value is validated
+  // against its field definition. For NIGHTS add-ons the values are written to every per-night
+  // reservation.
+  extended_fields: { test_field: 'probeA123' }
 })
 // data.reservation_ids => ['reservation-uuid', ...]
 ```
