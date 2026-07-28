@@ -160,9 +160,19 @@ interface ListAvailabilitiesResponseInterface {
 interface CreateReservationInterface {
   guest_code: string
   reservations: Array<{
-    starts_at: string
-    ends_at: string
     bookable_id: string
+    /**
+     * Required unless the bookable is an add-on with a FIXED availability type, which has no
+     * date window — for those the reservation is stored without dates.
+     */
+    starts_at?: string
+    ends_at?: string
+    quantity?: number
+    /**
+     * Reservation-scoped extended field values, keyed by field key. Only keys defined on the
+     * bookable group for the `bookableReservation` model are accepted.
+     */
+    extended_fields?: object
   }>
 }
 
@@ -182,6 +192,13 @@ interface AddOrderLineItemInterface {
   start_at?: string
   end_at?: string
   quantity: number
+  /**
+   * Reservation-scoped extended field values, keyed by field key. Only keys defined on the
+   * add-on's bookable group for the `bookableReservation` model are accepted, and each value is
+   * validated against its field definition. For NIGHTS add-ons the values are written to every
+   * per-night reservation.
+   */
+  extended_fields?: object
 }
 
 interface CreateOrderResponseInterface {

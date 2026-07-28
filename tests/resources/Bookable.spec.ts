@@ -91,6 +91,29 @@ test('createReservation()', async () => {
   )
 })
 
+test('createReservation() without dates for a FIXED bookable', async () => {
+  const requestBody = {
+    guest_code: 'ABC123',
+    reservations: [
+      {
+        bookable_id: '68076f81-4598-8009-b047-82e482892527',
+        quantity: 1,
+        extended_fields: { test_field: 'probeA123' },
+      },
+    ],
+  }
+  await bookable.createReservation('bookable-group-uuid', requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/groups/bookable-group-uuid/reservations',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
 test('deleteReservation()', async () => {
   await bookable.deleteReservation('guest-code', 'reservation-uuid')
 
@@ -141,6 +164,25 @@ test('addOrderLineItem()', async () => {
     start_at: '2026-06-03',
     end_at: '2026-06-06',
     quantity: 1,
+  }
+  await bookable.addOrderLineItem('order-uuid', requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/orders/order-uuid/line-items',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
+test('addOrderLineItem() with reservation extended_fields', async () => {
+  const requestBody = {
+    guest_code: 'ABC123',
+    addon_id: '68076f81-4598-8009-b047-82e482892527',
+    quantity: 1,
+    extended_fields: { test_field: 'probeA123' },
   }
   await bookable.addOrderLineItem('order-uuid', requestBody)
 
