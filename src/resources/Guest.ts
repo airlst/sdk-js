@@ -314,12 +314,15 @@ interface UpdateResponseInterface {
 export interface CreateMainBodyInterface extends CreateCompanionBodyInterface {
   status: string
   // Links the guest to an existing contact of the event's company instead of
-  // creating a new one. Mutually exclusive with `contact` — sending both is a
-  // 422. To also correct the contact data, follow up with update().
-  // Accepted only by POST /events/{event}/guests, so it is subtracted from
-  // CreateRecommendationBodyInterface below. GuestManager.create() posts to
-  // that same endpoint, so it accepts contact_id too.
+  // creating a new one. Mutually exclusive with `contact` and with each other —
+  // sending any pair is a 422. To also correct the contact data, follow up with
+  // update(). Accepted only by POST /events/{event}/guests, so both are
+  // subtracted from CreateRecommendationBodyInterface below.
+  // GuestManager.create() posts to that same endpoint, so it accepts them too.
   contact_id?: string
+  // The contact code, as returned by Contact.get(). Use this when you
+  // authenticated the contact by code and never resolved its id.
+  contact_code?: string
   companions?: Array<CreateNestedCompanionBodyInterface>
 }
 
@@ -338,6 +341,7 @@ export interface CreateNestedCompanionBodyInterface
   status?: string
   send_automated_email?: boolean
   contact_id?: string
+  contact_code?: string
 }
 
 export interface UpdateBodyInterface {
@@ -369,10 +373,13 @@ export interface CheckinBodyInterface {
   timestamp: number
 }
 
-// POST /guests/{code}/recommendations accepts neither contact_id nor inline
-// companions, so both are subtracted from the inherited create body.
+// POST /guests/{code}/recommendations accepts neither contact linking nor inline
+// companions, so all three are subtracted from the inherited create body.
 export interface CreateRecommendationBodyInterface
-  extends Omit<CreateMainBodyInterface, 'contact_id' | 'companions'> {}
+  extends Omit<
+    CreateMainBodyInterface,
+    'contact_id' | 'contact_code' | 'companions'
+  > {}
 
 // Envelopes below mirror the spec exactly and are intentionally not normalized:
 // guessImportFields and processImport return top-level objects (no `data`
