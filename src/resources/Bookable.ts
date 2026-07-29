@@ -186,10 +186,16 @@ interface CreateOrderInterface {
   booking_id: string
 }
 
-interface AddOrderLineItemInterface {
-  guest_code: string
+interface OrderLineItemInterface {
+  /** Must belong to a bookable group of this event. */
   addon_id: string
+  /**
+   * Required unless the add-on has a FIXED availability type, which has no date window. For a
+   * slot-based FLEXIBLE add-on this must be the start of one slot — a range spanning several slots
+   * is rejected, so send one entry per slot.
+   */
   start_at?: string
+  /** Required unless the add-on has a FIXED availability type. Must be the end of the same slot. */
   end_at?: string
   quantity: number
   /**
@@ -200,6 +206,31 @@ interface AddOrderLineItemInterface {
    */
   extended_fields?: object
 }
+
+/**
+ * Allocates one or more add-ons in a single request. Entries are independent, so one call may book
+ * several slots of a slot-based FLEXIBLE add-on (e.g. 20 hourly shifts), book non-contiguous slots,
+ * mix different add-ons and use a different quantity per entry.
+ *
+ * The payload is applied all-or-nothing: if any entry is invalid or unavailable, nothing is held and
+ * the 422 names the rejected entry ("Line item {index}: …"). At most 50 entries per request.
+ */
+interface AddOrderLineItemsInterface {
+  guest_code: string
+  line_items: Array<OrderLineItemInterface>
+}
+
+/**
+ * @deprecated Single-item body kept for backwards compatibility. Pass `line_items` instead — it
+ * accepts the same fields per entry and allocates any number of them in one request.
+ */
+interface AddOrderLineItemLegacyInterface extends OrderLineItemInterface {
+  guest_code: string
+}
+
+type AddOrderLineItemInterface =
+  | AddOrderLineItemsInterface
+  | AddOrderLineItemLegacyInterface
 
 interface CreateOrderResponseInterface {
   data: OrderInterface
@@ -215,7 +246,17 @@ interface ShowOrderResponseInterface {
 
 interface AddOrderLineItemResponseInterface {
   data: {
+    /**
+     * Every created reservation id, flat and in submission order. An entry contributes more than one
+     * id when the add-on fans out (NIGHTS: one reservation per night).
+     */
     reservation_ids: Array<string>
+    /** The created reservations grouped by the submitted entry they belong to. */
+    line_items: Array<{
+      /** Position of the entry in the submitted `line_items` array. */
+      index: number
+      reservation_ids: Array<string>
+    }>
   }
 }
 

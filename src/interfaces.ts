@@ -187,6 +187,22 @@ export interface AvailabilityInterface {
   buffer_time: number
   min: number
   max: number
+  /**
+   * Slot-based (FLEXIBLE) configuration. Derive the bookable slots from it: starting at the
+   * event-local `starts_at` time of day, step `duration_minutes + buffer_minutes` until the window
+   * closes; each slot covers `[slot_start, slot_start + duration_minutes)` and seats
+   * `capacity_per_slot` units. A window whose closing time is not after its opening time (e.g.
+   * 22:00–06:00, or 00:00–00:00 for 24/7) runs past midnight, and every day of the availability
+   * repeats the full window. Book each slot as its own `line_items` entry via `addOrderLineItem()`.
+   *
+   * `duration_minutes` is the mode signal — it is null for every non-slot availability (including
+   * legacy free-duration FLEXIBLE, which uses `min` / `max` / `buffer_time` above).
+   * `buffer_minutes` and `capacity_per_slot` always carry their column defaults (0 / 1) and say
+   * nothing about the mode, so do not detect slot mode from them.
+   */
+  duration_minutes: number | null
+  buffer_minutes: number | null
+  capacity_per_slot: number | null
 }
 
 export interface ImportableFieldInterface {

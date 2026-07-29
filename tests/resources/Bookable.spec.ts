@@ -196,6 +196,56 @@ test('addOrderLineItem() with reservation extended_fields', async () => {
   )
 })
 
+test('addOrderLineItem() with several line_items in one request', async () => {
+  const requestBody = {
+    guest_code: 'ABC123',
+    line_items: [
+      {
+        addon_id: '68076f81-4598-8009-b047-82e482892527',
+        start_at: '2026-06-03T09:00:00Z',
+        end_at: '2026-06-03T10:00:00Z',
+        quantity: 1,
+      },
+      {
+        addon_id: '68076f81-4598-8009-b047-82e482892527',
+        start_at: '2026-06-03T10:00:00Z',
+        end_at: '2026-06-03T11:00:00Z',
+        quantity: 2,
+        extended_fields: { guard_name: 'Late shift' },
+      },
+    ],
+  }
+  await bookable.addOrderLineItem('order-uuid', requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/orders/order-uuid/line-items',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
+test('addOrderLineItem() with line_items for a FIXED add-on omits the dates', async () => {
+  const requestBody = {
+    guest_code: 'ABC123',
+    line_items: [
+      { addon_id: '68076f81-4598-8009-b047-82e482892527', quantity: 3 },
+    ],
+  }
+  await bookable.addOrderLineItem('order-uuid', requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/orders/order-uuid/line-items',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
 test('deleteOrderLineItem()', async () => {
   await bookable.deleteOrderLineItem('order-uuid', 'line-item-uuid')
 
