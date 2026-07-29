@@ -423,6 +423,21 @@ midnight, and every day of the availability repeats the full window. Book each s
 `duration_minutes` is the mode signal — it is `null` for every non-slot availability. Do not detect
 slot mode from `buffer_minutes` or `capacity_per_slot`: those always carry their defaults (`0` / `1`).
 
+Each availability also carries the price for its own pricing model, so you never have to hardcode a
+price in the frontend. At most one of the three fields is populated; the others are `null`:
+
+| Field | Populated for | Shape |
+| --- | --- | --- |
+| `per_item_price` | quantity-based (FIXED) | `{ [guestGroupId]: Price }` — per item, multiply by the quantity |
+| `per_duration_price` | slot-based (FLEXIBLE with `duration_minutes`) | `{ [guestGroupId]: { [minutes]: Price } }` — per slot; does **not** scale with the slot length |
+| `per_night_price` | per-night (NIGHTS) | `{ [guestGroupId]: { [YYYY-MM-DD]: Price } }` — per night, sum the stay |
+
+`net`, `gross` and `vat` are integers in minor units (cents) with `gross` inclusive of VAT, and
+`vat_rate` is a percentage. The outer key is the availability's own guest group, or
+`00000000-0000-0000-0000-000000000000` for a row that applies to every group without a specific
+price. A legacy FLEXIBLE availability with no `duration_minutes` has no per-duration price and
+reports `null`.
+
 #### Create reservation
 
 ```javascript
