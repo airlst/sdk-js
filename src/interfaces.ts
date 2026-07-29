@@ -184,6 +184,13 @@ export interface AvailabilityInterface {
   per_night_total_capacity: Record<string, Record<string, number>> | null
   per_night_remaining_capacity: Record<string, Record<string, number>> | null
   per_night_price: Record<string, Record<string, PriceInterface>> | null
+  /** Quantity-based (FIXED) bookables only: price per item, keyed by guest group. */
+  per_item_price: Record<string, PriceInterface> | null
+  /**
+   * Slot-based (FLEXIBLE with a slot length) bookables only: price per slot, keyed by guest group
+   * and then by the slot length in minutes. The price does not scale with the slot length.
+   */
+  per_duration_price: Record<string, Record<string, PriceInterface>> | null
   buffer_time: number
   min: number
   max: number
