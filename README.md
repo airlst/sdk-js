@@ -412,6 +412,17 @@ const { data } = await new Bookable('event-uuid').listAvailabilities('bookable-g
 })
 ```
 
+For a slot-based FLEXIBLE bookable, each availability also carries the slot configuration so you can
+derive the bookable slots yourself: starting at the event-local `starts_at` time of day, step
+`duration_minutes + buffer_minutes` until the window closes; each slot covers
+`[slot_start, slot_start + duration_minutes)` and seats `capacity_per_slot` units. A window whose
+closing time is not after its opening time (e.g. 22:00–06:00, or 00:00–00:00 for 24/7) runs past
+midnight, and every day of the availability repeats the full window. Book each slot as its own
+`line_items` entry via `addOrderLineItem()`.
+
+`duration_minutes` is the mode signal — it is `null` for every non-slot availability. Do not detect
+slot mode from `buffer_minutes` or `capacity_per_slot`: those always carry their defaults (`0` / `1`).
+
 #### Create reservation
 
 ```javascript
@@ -470,25 +481,58 @@ import { Bookable } from '@airlst/sdk'
 const { data } = await new Bookable('event-uuid').getOrder('order-uuid')
 ```
 
-#### Add an add-on allocation line item to a carrier order
+#### Add add-on allocation line items to a carrier order
+
+Pass `line_items` to allocate any number of add-ons in one request. Entries are independent, so a
+single call can book several slots of a slot-based FLEXIBLE add-on (e.g. 20 hourly shifts of stand
+security), book non-contiguous slots, mix different add-ons and use a different quantity per entry.
+
+The payload is applied all-or-nothing: if any entry is invalid or unavailable, nothing is held and
+the request fails with 422 naming the rejected entry (`Line item 1: …`). At most 50 entries per
+request.
 
 ```javascript
 import { Bookable } from '@airlst/sdk'
 
 const { data } = await new Bookable('event-uuid').addOrderLineItem('order-uuid', {
   guest_code: 'guest-code',
-  addon_id: 'addon-uuid',
-  // Required unless the add-on has a FIXED availability type
-  start_at: '2026-06-03',
-  end_at: '2026-06-06',
-  quantity: 1,
-  // Reservation-scoped extended fields, keyed by field key. Only keys defined on the add-on's
-  // bookable group for the `bookableReservation` model are accepted, and each value is validated
-  // against its field definition. For NIGHTS add-ons the values are written to every per-night
-  // reservation.
-  extended_fields: { test_field: 'probeA123' }
+  line_items: [
+    {
+      addon_id: 'addon-uuid',
+      // Required unless the add-on has a FIXED availability type. For a slot-based FLEXIBLE add-on
+      // these must be the boundaries of one slot — a range spanning several slots is rejected, so
+      // send one entry per slot. Read duration_minutes / buffer_minutes / capacity_per_slot from
+      // listAvailabilities() to work out the slots.
+      start_at: '2026-06-03T09:00:00Z',
+      end_at: '2026-06-03T10:00:00Z',
+      quantity: 1
+    },
+    {
+      addon_id: 'addon-uuid',
+      start_at: '2026-06-03T10:00:00Z',
+      end_at: '2026-06-03T11:00:00Z',
+      quantity: 1,
+      // Reservation-scoped extended fields, keyed by field key. Only keys defined on the add-on's
+      // bookable group for the `bookableReservation` model are accepted, and each value is validated
+      // against its field definition. For NIGHTS add-ons the values are written to every per-night
+      // reservation.
+      extended_fields: { test_field: 'probeA123' }
+    }
+  ]
 })
-// data.reservation_ids => ['reservation-uuid', ...]
+// data.reservation_ids => ['reservation-uuid', ...] (flat, in submission order)
+// data.line_items => [{ index: 0, reservation_ids: [...] }, { index: 1, reservation_ids: [...] }]
+```
+
+The previous single-item body (`addon_id` / `start_at` / `end_at` / `quantity` / `extended_fields` at
+the top level) still works unchanged, but is deprecated in favour of `line_items`:
+
+```javascript
+const { data } = await new Bookable('event-uuid').addOrderLineItem('order-uuid', {
+  guest_code: 'guest-code',
+  addon_id: 'addon-uuid',
+  quantity: 1
+})
 ```
 
 #### Delete an add-on allocation line item and release its contingent
