@@ -6,6 +6,14 @@ export interface EventInterface {
   default_locale: LocaleInterface
   additional_locales: Array<LocaleInterface>
   registration_type: string
+  /**
+   * IANA identifier of the event timezone, e.g. `Europe/Berlin`.
+   *
+   * Every datetime the API emits and accepts is an absolute UTC instant, never event-local wall
+   * clock. This is what to render those instants in, and what to convert a wall-clock time picked
+   * by a user *from* before sending it back (AIRLST-5311).
+   */
+  timezone: string
 }
 
 interface LocaleInterface {
@@ -179,7 +187,12 @@ export interface PriceInterface {
 }
 
 export interface AvailabilityInterface {
+  /**
+   * Absolute UTC instant (`2030-06-03T07:00:00.000000Z`), never event-local wall clock. Render it in
+   * the event timezone, which `listAvailabilities()` returns as `data.timezone` (AIRLST-5311).
+   */
   starts_at: string
+  /** Absolute UTC instant. Same semantics as `starts_at`. */
   ends_at: string
   per_night_total_capacity: Record<string, Record<string, number>> | null
   per_night_remaining_capacity: Record<string, Record<string, number>> | null
@@ -195,12 +208,19 @@ export interface AvailabilityInterface {
   min: number
   max: number
   /**
-   * Slot-based (FLEXIBLE) configuration. Derive the bookable slots from it: starting at the
-   * event-local `starts_at` time of day, step `duration_minutes + buffer_minutes` until the window
-   * closes; each slot covers `[slot_start, slot_start + duration_minutes)` and seats
-   * `capacity_per_slot` units. A window whose closing time is not after its opening time (e.g.
-   * 22:00–06:00, or 00:00–00:00 for 24/7) runs past midnight, and every day of the availability
-   * repeats the full window. Book each slot as its own `line_items` entry via `addOrderLineItem()`.
+   * Slot-based (FLEXIBLE) configuration. Derive the bookable slots from it: convert `starts_at` into
+   * the event timezone (`data.timezone` on the same response), step
+   * `duration_minutes + buffer_minutes` in that local wall clock until the window closes, then
+   * convert each slot boundary back to UTC — which is how the server generates them.
+   *
+   * Stepping in UTC instead only agrees with the server while the offset is constant: across a DST
+   * transition inside the window, consecutive slots are NOT a fixed number of UTC minutes apart and
+   * the two grids diverge.
+   *
+   * Each slot covers `[slot_start, slot_start + duration_minutes)` and seats `capacity_per_slot`
+   * units. A window whose closing time is not after its opening time (e.g. 22:00–06:00, or
+   * 00:00–00:00 for 24/7) runs past midnight, and every day of the availability repeats the full
+   * window. Book each slot as its own `line_items` entry via `addOrderLineItem()`.
    *
    * `duration_minutes` is the mode signal — it is null for every non-slot availability (including
    * legacy free-duration FLEXIBLE, which uses `min` / `max` / `buffer_time` above).

@@ -146,13 +146,25 @@ interface ListBookablesResponseInterface {
 }
 
 interface ListAvailabilitiesInterface {
+  /**
+   * Start of the window to list availabilities for. An absolute instant: a value without a zone is
+   * read as UTC, not as event-local time.
+   */
   start_date: string
+  /** End of the window. Same instant semantics as `start_date`. */
   end_date: string
   guest_code?: string
 }
 
 interface ListAvailabilitiesResponseInterface {
   data: {
+    /**
+     * IANA identifier of the event timezone, e.g. `Europe/Berlin`. Every `starts_at` / `ends_at` in
+     * `availabilities` — and every slot derived from them — is an absolute UTC instant. This is the
+     * timezone the slot grid was generated in, so a client deriving slots from `duration_minutes`
+     * needs no second request to convert against (AIRLST-5311).
+     */
+    timezone: string
     availabilities: Array<AvailabilityInterface>
   }
 }
@@ -164,8 +176,12 @@ interface CreateReservationInterface {
     /**
      * Required unless the bookable is an add-on with a FIXED availability type, which has no
      * date window — for those the reservation is stored without dates.
+     *
+     * An absolute instant: UTC (`…Z`) or an explicit offset, which is stored as the same instant. A
+     * value carrying no zone is read as UTC, not as event-local wall clock (AIRLST-5311).
      */
     starts_at?: string
+    /** Same instant semantics as `starts_at`. */
     ends_at?: string
     quantity?: number
     /**
@@ -193,9 +209,19 @@ interface OrderLineItemInterface {
    * Required unless the add-on has a FIXED availability type, which has no date window. For a
    * slot-based FLEXIBLE add-on this must be the start of one slot — a range spanning several slots
    * is rejected, so send one entry per slot.
+   *
+   * An **absolute instant**, never event-local wall clock. Send UTC (`2026-06-03T09:00:00Z`) or an
+   * explicit offset (`2026-06-03T11:00:00+02:00`), which is stored as the same instant; a value
+   * carrying no zone at all is read as UTC. To book a wall-clock time, convert it from the event
+   * timezone first — `listAvailabilities()` returns it as `data.timezone`, and it is also on
+   * `EventInterface`. Sending `23:00` for a 23:00 event-local slot in a UTC+2 event books a
+   * different slot, or none (AIRLST-5311).
    */
   start_at?: string
-  /** Required unless the add-on has a FIXED availability type. Must be the end of the same slot. */
+  /**
+   * Required unless the add-on has a FIXED availability type. Must be the end of the same slot.
+   * Same instant semantics as `start_at`.
+   */
   end_at?: string
   quantity: number
   /**
