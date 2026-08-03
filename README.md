@@ -412,13 +412,22 @@ const { data } = await new Bookable('event-uuid').listAvailabilities('bookable-g
 })
 ```
 
+Every datetime in the response is an **absolute UTC instant**, never event-local wall clock. The
+response publishes the event timezone as `data.timezone` (e.g. `Europe/Berlin`) — the same value is
+also on `EventInterface` — so you can render those instants and convert a wall-clock time picked by a
+user back to UTC without a second request.
+
 For a slot-based FLEXIBLE bookable, each availability also carries the slot configuration so you can
-derive the bookable slots yourself: starting at the event-local `starts_at` time of day, step
-`duration_minutes + buffer_minutes` until the window closes; each slot covers
+derive the bookable slots yourself: convert `starts_at` into `data.timezone`, step
+`duration_minutes + buffer_minutes` in that local wall clock until the window closes, then convert
+each slot boundary back to UTC — which is how the server generates them. Each slot covers
 `[slot_start, slot_start + duration_minutes)` and seats `capacity_per_slot` units. A window whose
 closing time is not after its opening time (e.g. 22:00–06:00, or 00:00–00:00 for 24/7) runs past
 midnight, and every day of the availability repeats the full window. Book each slot as its own
 `line_items` entry via `addOrderLineItem()`.
+
+> Step in local time, not in UTC. Across a DST transition inside the window, consecutive slots are
+> **not** a fixed number of UTC minutes apart, so a UTC-stepped grid diverges from the server's.
 
 `duration_minutes` is the mode signal — it is `null` for every non-slot availability. Do not detect
 slot mode from `buffer_minutes` or `capacity_per_slot`: those always carry their defaults (`0` / `1`).
@@ -505,6 +514,12 @@ security), book non-contiguous slots, mix different add-ons and use a different 
 The payload is applied all-or-nothing: if any entry is invalid or unavailable, nothing is held and
 the request fails with 422 naming the rejected entry (`Line item 1: …`). At most 50 entries per
 request.
+
+`start_at` and `end_at` are **absolute instants**, never event-local wall clock. Send UTC (`…Z`) or an
+explicit offset (`2026-06-03T11:00:00+02:00`), which is stored as the same instant; a value carrying
+no zone at all is read as UTC. To book a wall-clock time, convert it from the event timezone first —
+`listAvailabilities()` returns it as `data.timezone`. Sending `23:00` for a 23:00 event-local slot in
+a UTC+2 event books a different slot, or none.
 
 ```javascript
 import { Bookable } from '@airlst/sdk'

@@ -23,6 +23,18 @@ test('get()', async () => {
   expect(apiMock).toHaveBeenCalledWith('/events/abc')
 })
 
+test('get() exposes the event timezone', async () => {
+  // Every datetime the API emits is an absolute UTC instant, so consumers need the event timezone to
+  // render them and to convert a picked wall-clock time back before sending it (AIRLST-5311).
+  apiMock.mockResolvedValueOnce({
+    data: { event: { id: 'abc', timezone: 'Europe/Berlin' } },
+  })
+
+  const response = await event.get('abc')
+
+  expect(response.data.event.timezone).toBe('Europe/Berlin')
+})
+
 test('generateTemporaryUploadUrl()', async () => {
   const signedUrlResponse = {
     data: {

@@ -46,6 +46,37 @@ test('listAvailabilities()', async () => {
   )
 })
 
+test('listAvailabilities() returns the event timezone alongside the availabilities', async () => {
+  // The availabilities carry UTC instants and the client derives slots from duration_minutes, so the
+  // response publishes the timezone to convert against — no second request needed (AIRLST-5311).
+  apiMock.mockResolvedValueOnce({
+    data: {
+      timezone: 'Europe/Berlin',
+      availabilities: [
+        {
+          starts_at: '2026-07-29T20:00:00.000000Z',
+          ends_at: '2026-07-29T22:00:00.000000Z',
+          duration_minutes: 60,
+          buffer_minutes: 0,
+          capacity_per_slot: 1,
+        },
+      ],
+    },
+  })
+
+  const response = await bookable.listAvailabilities(
+    'bookable-group-uuid',
+    'bookable-object-uuid',
+    { start_date: 'start-date', end_date: 'end-date' },
+  )
+
+  expect(response.data.timezone).toBe('Europe/Berlin')
+  // 20:00Z is 22:00 in Europe/Berlin on a summer day — the instant is untouched by the field.
+  expect(response.data.availabilities[0].starts_at).toBe(
+    '2026-07-29T20:00:00.000000Z',
+  )
+})
+
 test('listAvailabilities() with guest_code', async () => {
   const requestBody = {
     start_date: 'start-date',
