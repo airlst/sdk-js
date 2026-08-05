@@ -573,6 +573,22 @@ import { Bookable } from '@airlst/sdk'
 await new Bookable('event-uuid').deleteOrderLineItem('order-uuid', 'line-item-uuid')
 ```
 
+#### Bulk-delete add-on allocation line items in one request
+
+Removes several line items at once. A slot-based add-on holds one line item per slot, so this clears a whole time range in a single call instead of one `deleteOrderLineItem()` per slot. Read the ids from `getOrder()`. Up to 100 ids per request; the call is all-or-nothing.
+
+`deleted_line_item_ids` is the authoritative list of what was removed — it can name more ids than the request when a NIGHTS add-on releases the whole contiguous stay.
+
+```javascript
+import { Bookable } from '@airlst/sdk'
+
+const { data } = await new Bookable('event-uuid').bulkDeleteOrderLineItems('order-uuid', {
+  line_item_ids: ['line-item-uuid-1', 'line-item-uuid-2']
+})
+
+console.log(data.deleted_count, data.deleted_line_item_ids)
+```
+
 #### Bulk-assign an add-on to many guests
 
 Assigns a single add-on selection to many guests at once. Processing is asynchronous, so the call resolves with no content once the batch has been queued.

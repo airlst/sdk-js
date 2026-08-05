@@ -289,6 +289,22 @@ test('deleteOrderLineItem()', async () => {
   )
 })
 
+test('bulkDeleteOrderLineItems()', async () => {
+  const requestBody = {
+    line_item_ids: ['line-item-uuid-1', 'line-item-uuid-2'],
+  }
+  await bookable.bulkDeleteOrderLineItems('order-uuid', requestBody)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/bookables/orders/order-uuid/line-items/bulk-delete',
+    {
+      method: 'post',
+      body: JSON.stringify(requestBody),
+    },
+  )
+})
+
 test('assignBookables()', async () => {
   const requestBody = {
     guests: ['ABCD1234', 'ABCD2345'],
