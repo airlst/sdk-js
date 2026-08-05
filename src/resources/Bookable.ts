@@ -119,6 +119,19 @@ export const Bookable = class {
     )
   }
 
+  public async bulkDeleteOrderLineItems(
+    orderUuid: string,
+    body: BulkDeleteOrderLineItemsInterface,
+  ): Promise<BulkDeleteOrderLineItemsResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/bookables/orders/${orderUuid}/line-items/bulk-delete`,
+      {
+        method: 'post',
+        body: JSON.stringify(body),
+      },
+    )
+  }
+
   public async assignBookables(body: AssignBookablesInterface): Promise<void> {
     await Api.sendRequest(`/events/${this.eventId}/bookables/assignments`, {
       method: 'post',
@@ -283,6 +296,29 @@ interface AddOrderLineItemResponseInterface {
       index: number
       reservation_ids: Array<string>
     }>
+  }
+}
+
+interface BulkDeleteOrderLineItemsInterface {
+  /**
+   * The line items to delete, 1–100 unique ids, each belonging to this order. Read them from
+   * `getOrder()`, whose `line_items` carry the `id`, `option_from` and `option_to` to pick a range
+   * against. Use this instead of one `deleteOrderLineItem()` call per slot to clear a whole time
+   * range at once.
+   */
+  line_item_ids: Array<string>
+}
+
+interface BulkDeleteOrderLineItemsResponseInterface {
+  data: {
+    /**
+     * Every deleted line item id. Names more ids than the request when a NIGHTS add-on releases the
+     * whole contiguous stay one of the ids belonged to, so this — not the request — is the
+     * authoritative list of what was removed.
+     */
+    deleted_line_item_ids: Array<string>
+    /** Number of entries in `deleted_line_item_ids`. */
+    deleted_count: number
   }
 }
 
