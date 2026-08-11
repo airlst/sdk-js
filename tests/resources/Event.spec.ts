@@ -35,6 +35,19 @@ test('get() exposes the event timezone', async () => {
   expect(response.data.event.timezone).toBe('Europe/Berlin')
 })
 
+test('get() exposes the sub-event counts', async () => {
+  // Every event object reports whether it is a parent of sub-events and how many it has
+  // (AIRLST-5445). Sub-event details come from a session-authed suite endpoint outside this SDK.
+  apiMock.mockResolvedValueOnce({
+    data: { event: { id: 'abc', is_parent: true, sub_events_count: 3 } },
+  })
+
+  const response = await event.get('abc')
+
+  expect(response.data.event.is_parent).toBe(true)
+  expect(response.data.event.sub_events_count).toBe(3)
+})
+
 test('generateTemporaryUploadUrl()', async () => {
   const signedUrlResponse = {
     data: {

@@ -14,6 +14,14 @@ export interface EventInterface {
    * by a user *from* before sending it back (AIRLST-5311).
    */
   timezone: string
+  /**
+   * Whether the event has sub-events (AIRLST-5445). Shorthand for `sub_events_count > 0`.
+   */
+  is_parent: boolean
+  /**
+   * Number of sub-events of the event (AIRLST-5445).
+   */
+  sub_events_count: number
 }
 
 interface LocaleInterface {

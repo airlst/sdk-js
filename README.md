@@ -40,6 +40,10 @@ import { Event } from '@airlst/sdk'
 const { data } = await new Event().get('event-uuid')
 ```
 
+Every event object also reports its sub-event state (AIRLST-5445): `is_parent` (boolean) and
+`sub_events_count` (integer). Listing the sub-events themselves happens through a session-authed
+suite endpoint that is not part of this SDK.
+
 #### Get temporary signed url to upload file directly to cloud storage
 
 ```javascript
