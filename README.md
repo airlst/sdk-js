@@ -41,8 +41,21 @@ const { data } = await new Event().get('event-uuid')
 ```
 
 Every event object also reports its sub-event state (AIRLST-5445): `is_parent` (boolean) and
-`sub_events_count` (integer). Listing the sub-events themselves happens through a session-authed
-suite endpoint that is not part of this SDK.
+`sub_events_count` (integer).
+
+#### List sub-events of an event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvents = await new SubEvent('event-uuid').list()
+```
+
+Each sub-event carries its quota state: `participations_count` counts occupying participations
+(statuses `invited` and `confirmed`), and each entry in `quotas` reports `limit` and `used`. A
+quota with `guest_group_id: null` is the default quota — it covers guests whose group has no
+dedicated quota row and guests without a group. Assigning guests to sub-events ships with a later
+release (AIRLST-5445 M1.2).
 
 #### Get temporary signed url to upload file directly to cloud storage
 

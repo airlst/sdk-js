@@ -6,6 +6,7 @@ import { GuestManager } from './resources/GuestManager'
 import { GuestGroup } from './resources/GuestGroup'
 import { Contact } from './resources/Contact'
 import { Bookable } from './resources/Bookable'
+import { SubEvent } from './resources/SubEvent'
 import {
   SecureLogin,
   IssueLoginCodeResponseInterface,
@@ -15,6 +16,8 @@ import { QueryBuilder, QueryParameters } from './utils/QueryBuilder'
 import {
   GuestManagerInterface,
   GuestGroupInterface,
+  SubEventInterface,
+  SubEventQuotaInterface,
   QuotaIncreaseRequestInterface,
   OrderInterface,
   OrderLineItemInterface,
@@ -29,6 +32,7 @@ export {
   Guest,
   GuestManager,
   GuestGroup,
+  SubEvent,
   EmailTemplate,
   Contact,
   Bookable,
@@ -39,6 +43,8 @@ export {
   QueryParameters,
   GuestManagerInterface,
   GuestGroupInterface,
+  SubEventInterface,
+  SubEventQuotaInterface,
   QuotaIncreaseRequestInterface,
   OrderInterface,
   OrderLineItemInterface,
