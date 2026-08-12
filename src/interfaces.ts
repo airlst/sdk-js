@@ -37,6 +37,12 @@ export interface GuestGroupInterface {
   }
 }
 
+export interface SubEventParticipationInterface {
+  id: string
+  sub_event_id: string
+  status: 'invited' | 'confirmed' | 'declined' | 'cancelled' | 'waitlisted'
+}
+
 export interface GuestInterface {
   id: string
   code: string
@@ -53,6 +59,12 @@ export interface GuestInterface {
   companion_guests?: Array<GuestInterface>
   recommended_by?: GuestInterface
   recommended_guests?: Array<GuestInterface>
+  /**
+   * The guest's sub-event participations with their per-sub-event status (AIRLST-5445).
+   * Only on `Guest.get()`, and only while the company's `sub-events` module is active —
+   * the key is absent otherwise, and on the nested guest objects of a response.
+   */
+  sub_event_participations?: Array<SubEventParticipationInterface>
 }
 
 export interface GuestManagerInterface

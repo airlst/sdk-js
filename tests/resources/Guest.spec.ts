@@ -75,6 +75,33 @@ test('get()', async () => {
   expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/guest-code')
 })
 
+test('get() exposes the sub-event participations', async () => {
+  // Present only while the company's `sub-events` module is active (AIRLST-5445);
+  // the key is absent otherwise. Assigning guests happens through a session-authed
+  // suite endpoint outside this SDK.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      guest: {
+        code: 'guest-code',
+        sub_event_participations: [
+          { id: 'p1', sub_event_id: 'se1', status: 'invited' },
+          { id: 'p2', sub_event_id: 'se2', status: 'waitlisted' },
+        ],
+      },
+    },
+  })
+
+  const response = await guest.get('guest-code')
+
+  expect(response.data.guest.sub_event_participations).toHaveLength(2)
+  expect(response.data.guest.sub_event_participations?.[0]?.status).toBe(
+    'invited',
+  )
+  expect(response.data.guest.sub_event_participations?.[1]?.sub_event_id).toBe(
+    'se2',
+  )
+})
+
 test('create()', async () => {
   guest.create({ a: 'b' })
 
