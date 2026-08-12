@@ -75,6 +75,30 @@ test('get()', async () => {
   expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/guest-code')
 })
 
+test('assignSubEvents()', async () => {
+  // One transaction on the API side (AIRLST-5445): a full sub-event yields a
+  // waitlisted participation, any error rolls back the whole batch.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [
+        { id: 'p1', sub_event_id: 'se1', status: 'invited' },
+        { id: 'p2', sub_event_id: 'se2', status: 'waitlisted' },
+      ],
+    },
+  })
+
+  const response = await guest.assignSubEvents('guest-code', ['se1', 'se2'])
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+    { method: 'post', body: '{"sub_event_ids":["se1","se2"]}' },
+  )
+  expect(response.data.participations).toHaveLength(2)
+  expect(response.data.participations[0]?.status).toBe('invited')
+  expect(response.data.participations[1]?.status).toBe('waitlisted')
+})
+
 test('get() exposes the sub-event participations', async () => {
   // Present only while the company's `sub-events` module is active (AIRLST-5445);
   // the key is absent otherwise. Assigning guests happens through a session-authed

@@ -6,6 +6,7 @@ import {
   AttachmentInterface,
   GuestsImportInterface,
   GuessImportFieldsResponseInterface,
+  SubEventParticipationInterface,
 } from '../interfaces'
 import { Event } from './Event'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
@@ -115,6 +116,25 @@ export const Guest = class {
       {
         method: 'post',
         body: JSON.stringify(body),
+      },
+    )
+  }
+
+  /**
+   * Assigns the guest to sub-events of the event in one transaction (AIRLST-5445).
+   * A full sub-event yields a `waitlisted` participation instead of `invited`; any
+   * error rolls back the whole batch. Requires the company's `sub-events` module,
+   * otherwise the API responds 400.
+   */
+  public async assignSubEvents(
+    code: string,
+    subEventIds: Array<string>,
+  ): Promise<AssignSubEventsResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/sub-events`,
+      {
+        method: 'post',
+        body: JSON.stringify({ sub_event_ids: subEventIds }),
       },
     )
   }
@@ -302,6 +322,12 @@ interface CreateResponseInterface {
 interface CreateRecommendationResponseInterface {
   data: {
     guest: GuestInterface
+  }
+}
+
+interface AssignSubEventsResponseInterface {
+  data: {
+    participations: Array<SubEventParticipationInterface>
   }
 }
 
