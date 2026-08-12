@@ -118,8 +118,8 @@ const { data } = await new Guest('event-uuid').get('guest-code')
 When the company's `sub-events` module is active, the guest object also carries
 `sub_event_participations` (AIRLST-5445): the guest's sub-event participations with their
 per-sub-event `status` (`invited`, `confirmed`, `declined`, `cancelled` or `waitlisted`).
-The key is absent while the module is off. Assigning guests to sub-events happens through a
-session-authed suite endpoint that is not part of this SDK.
+The key is absent while the module is off. Assigning guests to sub-events becomes key-authed
+with AIRLST-5445 M1.2 and gets its SDK method then.
 
 #### Create a new guest
 
