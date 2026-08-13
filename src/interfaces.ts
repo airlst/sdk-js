@@ -14,6 +14,42 @@ export interface EventInterface {
    * by a user *from* before sending it back (AIRLST-5311).
    */
   timezone: string
+  /**
+   * Whether the event has sub-events (AIRLST-5445). Shorthand for `sub_events_count > 0`.
+   */
+  is_parent: boolean
+  /**
+   * Number of sub-events of the event (AIRLST-5445).
+   */
+  sub_events_count: number
+}
+
+export interface SubEventInterface {
+  id: string
+  name: string
+  starts_at: string
+  ends_at: string
+  registration_mode: 'invitation_only' | 'open'
+  /**
+   * Occupying participations only — statuses `invited` and `confirmed` (AIRLST-5445).
+   */
+  participations_count: number
+  quotas: Array<SubEventQuotaInterface>
+}
+
+export interface SubEventQuotaInterface {
+  id: string
+  /**
+   * Null marks the default quota: it covers guests whose group has no dedicated
+   * quota row and guests without a group.
+   */
+  guest_group_id: string | null
+  /**
+   * Locale-keyed guest group name; present only when `guest_group_id` is set.
+   */
+  guest_group_name?: { [locale: string]: string }
+  limit: number
+  used: number
 }
 
 interface LocaleInterface {
@@ -27,6 +63,12 @@ export interface GuestGroupInterface {
   name: {
     [locale: string]: string
   }
+}
+
+export interface SubEventParticipationInterface {
+  id: string
+  sub_event_id: string
+  status: 'invited' | 'confirmed' | 'declined' | 'cancelled' | 'waitlisted'
 }
 
 export interface GuestInterface {
@@ -45,6 +87,12 @@ export interface GuestInterface {
   companion_guests?: Array<GuestInterface>
   recommended_by?: GuestInterface
   recommended_guests?: Array<GuestInterface>
+  /**
+   * The guest's sub-event participations with their per-sub-event status (AIRLST-5445).
+   * Only on `Guest.get()`, and only while the company's `sub-events` module is active —
+   * the key is absent otherwise, and on the nested guest objects of a response.
+   */
+  sub_event_participations?: Array<SubEventParticipationInterface>
 }
 
 export interface GuestManagerInterface

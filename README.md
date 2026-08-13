@@ -40,6 +40,25 @@ import { Event } from '@airlst/sdk'
 const { data } = await new Event().get('event-uuid')
 ```
 
+Every event object also reports its sub-event state (AIRLST-5445): `is_parent` (boolean) and
+`sub_events_count` (integer).
+
+#### List sub-events of an event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvents = await new SubEvent('event-uuid').list()
+```
+
+Each sub-event carries its quota state: `participations_count` counts occupying participations
+(statuses `invited` and `confirmed`), and each entry in `quotas` reports `limit` and `used`. A
+quota with `guest_group_id: null` is the default quota — it covers guests whose group has no
+dedicated quota row and guests without a group. A quota tied to a guest group also carries
+`guest_group_name` as a locale-keyed object (`{ 'en-GB': 'VIP' }`); the default quota has no
+group, so the key is absent there. To assign guests, use `Guest.assignSubEvents()` (see the
+Guest methods).
+
 #### Get temporary signed url to upload file directly to cloud storage
 
 ```javascript
@@ -97,6 +116,28 @@ import { Guest } from '@airlst/sdk'
 
 const { data } = await new Guest('event-uuid').get('guest-code')
 ```
+
+When the company's `sub-events` module is active, the guest object also carries
+`sub_event_participations` (AIRLST-5445): the guest's sub-event participations with their
+per-sub-event `status` (`invited`, `confirmed`, `declined`, `cancelled` or `waitlisted`).
+The key is absent while the module is off.
+
+#### Assign a guest to sub-events
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').assignSubEvents('guest-code', [
+  'sub-event-uuid-1',
+  'sub-event-uuid-2',
+])
+```
+
+The assignment is one transaction (AIRLST-5445): a full sub-event yields a `waitlisted`
+participation instead of `invited`, and any error rolls back the whole batch. The response
+reports the created participations with their per-sub-event `status`. Requires the company's
+`sub-events` module; a sub-event of another event, or one the guest already participates in,
+responds 422.
 
 #### Create a new guest
 
