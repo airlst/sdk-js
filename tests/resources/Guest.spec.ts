@@ -101,8 +101,7 @@ test('assignSubEvents()', async () => {
 
 test('get() exposes the sub-event participations', async () => {
   // Present only while the company's `sub-events` module is active (AIRLST-5445);
-  // the key is absent otherwise. Assigning guests happens through a session-authed
-  // suite endpoint outside this SDK.
+  // the key is absent otherwise. Assigning guests happens through assignSubEvents().
   apiMock.mockResolvedValueOnce({
     data: {
       guest: {

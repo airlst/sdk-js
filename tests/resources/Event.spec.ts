@@ -37,7 +37,7 @@ test('get() exposes the event timezone', async () => {
 
 test('get() exposes the sub-event counts', async () => {
   // Every event object reports whether it is a parent of sub-events and how many it has
-  // (AIRLST-5445). Sub-event details come from a session-authed suite endpoint outside this SDK.
+  // (AIRLST-5445). Sub-event details come from SubEvent.list().
   apiMock.mockResolvedValueOnce({
     data: { event: { id: 'abc', is_parent: true, sub_events_count: 3 } },
   })
