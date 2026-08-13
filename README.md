@@ -54,8 +54,10 @@ const subEvents = await new SubEvent('event-uuid').list()
 Each sub-event carries its quota state: `participations_count` counts occupying participations
 (statuses `invited` and `confirmed`), and each entry in `quotas` reports `limit` and `used`. A
 quota with `guest_group_id: null` is the default quota — it covers guests whose group has no
-dedicated quota row and guests without a group. To assign guests, use
-`Guest.assignSubEvents()` (see the Guest methods).
+dedicated quota row and guests without a group. A quota tied to a guest group also carries
+`guest_group_name` as a locale-keyed object (`{ 'en-GB': 'VIP' }`); the default quota has no
+group, so the key is absent there. To assign guests, use `Guest.assignSubEvents()` (see the
+Guest methods).
 
 #### Get temporary signed url to upload file directly to cloud storage
 
