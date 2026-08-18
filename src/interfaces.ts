@@ -43,6 +43,42 @@ export interface SubEventInterface {
   quotas: Array<SubEventQuotaInterface>
 }
 
+/**
+ * One released sub-event as the acting guest manager sees it (AIRLST-5446).
+ *
+ * Returned by `GuestManager.listSubEvents()`. The manager gets its OWN contingent
+ * only — guest-group rows, the default row and the rows of other managers are never
+ * exposed on this surface. Unreleased sub-events are absent entirely; read
+ * `SubEvent.list()` (the full integrator view) to see released and unreleased
+ * sub-events alike.
+ */
+export interface GuestManagerSubEventContingentInterface {
+  id: string
+  name: string
+  starts_at: string
+  ends_at: string
+  registration_mode: 'invitation_only' | 'open'
+  /**
+   * Never null on this surface: the list returns released sub-events only.
+   */
+  released_at: string
+  /**
+   * Occupying participations — statuses `invited` and `confirmed` — of THIS
+   * manager's guests. Always reported, also when the manager has no quota row.
+   */
+  booked: number
+  /**
+   * The limit of the manager's own quota row, or null when the manager has no row:
+   * the manager dimension is then unlimited, though the sub-event's guest-group or
+   * default quota still applies when a guest is booked.
+   */
+  limit: number | null
+  /**
+   * `limit - booked`, never below 0. Null whenever `limit` is null.
+   */
+  remaining: number | null
+}
+
 export interface SubEventQuotaInterface {
   id: string
   /**

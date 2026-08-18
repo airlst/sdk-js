@@ -154,3 +154,144 @@ test('getAttachmentSignedUrl()', async () => {
     '/events/event-uuid/guests/guest-code/attachments/attachment-uuid/url',
   )
 })
+
+test('listSubEvents()', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [
+        {
+          id: 'sub-event-uuid',
+          name: 'Product Summit Europe',
+          starts_at: '2027-05-03T09:00:00.000000Z',
+          ends_at: '2027-05-03T17:00:00.000000Z',
+          registration_mode: 'invitation_only',
+          released_at: '2026-08-20T08:00:00.000000Z',
+          booked: 7,
+          limit: 20,
+          remaining: 13,
+        },
+      ],
+    },
+  })
+
+  const subEvents = await guestManager.listSubEvents('guest-manager-uuid')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events',
+  )
+  expect(subEvents).toHaveLength(1)
+  expect(subEvents[0].booked).toBe(7)
+  expect(subEvents[0].limit).toBe(20)
+  expect(subEvents[0].remaining).toBe(13)
+})
+
+test('listSubEvents() reports an unlimited manager dimension', async () => {
+  // The manager owns no quota row on this sub-event, so limit and remaining are
+  // null — but the usage is still reported (AIRLST-5446).
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [
+        {
+          id: 'sub-event-uuid',
+          name: 'Service Summit Europe',
+          starts_at: '2027-05-04T09:00:00.000000Z',
+          ends_at: '2027-05-04T17:00:00.000000Z',
+          registration_mode: 'invitation_only',
+          released_at: '2026-08-20T08:00:00.000000Z',
+          booked: 2,
+          limit: null,
+          remaining: null,
+        },
+      ],
+    },
+  })
+
+  const subEvents = await guestManager.listSubEvents('guest-manager-uuid')
+
+  expect(subEvents[0].booked).toBe(2)
+  expect(subEvents[0].limit).toBeNull()
+  expect(subEvents[0].remaining).toBeNull()
+})
+
+test('assignGuestSubEvents()', async () => {
+  guestManager.assignGuestSubEvents('guest-manager-uuid', 'guest-code', [
+    'sub-event-uuid-1',
+    'sub-event-uuid-2',
+  ])
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        sub_event_ids: ['sub-event-uuid-1', 'sub-event-uuid-2'],
+      }),
+    },
+  )
+})
+
+test('assignGuestSubEvents() with participation extended fields', async () => {
+  guestManager.assignGuestSubEvents(
+    'guest-manager-uuid',
+    'guest-code',
+    ['sub-event-uuid-1'],
+    { 'sub-event-uuid-1': { shirt_size: 'M' } },
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        sub_event_ids: ['sub-event-uuid-1'],
+        extended_fields: { 'sub-event-uuid-1': { shirt_size: 'M' } },
+      }),
+    },
+  )
+})
+
+test('assignGuestSubEvents() returns waitlisted participations and overlap warnings', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [
+        {
+          id: 'participation-uuid',
+          sub_event_id: 'sub-event-uuid-1',
+          status: 'waitlisted',
+        },
+      ],
+      overlap_warnings: [
+        { sub_event_ids: ['sub-event-uuid-1', 'sub-event-uuid-2'] },
+      ],
+    },
+  })
+
+  const { data } = await guestManager.assignGuestSubEvents(
+    'guest-manager-uuid',
+    'guest-code',
+    ['sub-event-uuid-1'],
+  )
+
+  expect(data.participations[0].status).toBe('waitlisted')
+  expect(data.overlap_warnings[0].sub_event_ids).toHaveLength(2)
+})
+
+test('promoteSubEventParticipation()', async () => {
+  guestManager.promoteSubEventParticipation(
+    'guest-manager-uuid',
+    'participation-uuid',
+    'confirmed',
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/participations/participation-uuid/promote',
+    {
+      method: 'post',
+      body: JSON.stringify({ status: 'confirmed' }),
+    },
+  )
+})

@@ -66,6 +66,11 @@ guest-manager booking, or `null` while it is unreleased. It is independent of
 `registration_mode`, the guest-facing invitation-only vs open switch. To assign guests, use
 `Guest.assignSubEvents()` (see the Guest methods).
 
+`SubEvent.list()` is the **full integrator view**: it returns released and unreleased
+sub-events alike, and `released_at` is what tells them apart. A guest-manager-facing consumer
+must not read it — use `GuestManager.listSubEvents()` instead, which returns released
+sub-events only and reports the acting manager's own contingent.
+
 #### Get temporary signed url to upload file directly to cloud storage
 
 ```javascript
@@ -340,6 +345,63 @@ const { data } = await new GuestManager('event-uuid').checkin('guest-manager-cod
 
 // And all other methods: createCompanion, archive, restore, delete, createRecommendation, getAttachments, getAttachmentSignedUrl
 ```
+
+#### List the sub-events a guest manager can book
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const subEvents = await new GuestManager('event-uuid').listSubEvents('guest-manager-uuid')
+```
+
+The contingent view of the guest-manager portal (AIRLST-5446). Guest managers exist only on the
+parent event, and a parent-scoped manager acts across the parent and its released sub-events —
+so the manager is named by its UUID and a manager of another event answers 404. Only **released**
+sub-events appear; use `SubEvent.list()` for the full integrator view.
+
+Each entry reports `booked` — the occupying participations (`invited` and `confirmed`) of this
+manager's guests — plus `limit` and `remaining` from the manager's own quota row. `limit` and
+`remaining` are `null` when the manager has no row: the manager dimension is then unlimited,
+though the sub-event's guest-group or default quota still applies when a guest is booked.
+`remaining` never goes below 0. Quota rows of guest groups, the default row and the rows of
+other managers are never exposed here. Requires the company's `sub-events` module.
+
+#### Book a guest onto sub-events as a guest manager
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const { data } = await new GuestManager('event-uuid').assignGuestSubEvents(
+  'guest-manager-uuid',
+  'guest-code',
+  ['sub-event-uuid-1', 'sub-event-uuid-2'],
+  { 'sub-event-uuid-1': { shirt_size: 'M' } },
+)
+```
+
+Same transaction, quota locks, waitlisting and response body as `Guest.assignSubEvents()`, plus
+the two guest-manager restrictions (AIRLST-5446). The guest must be assigned to that manager —
+a guest of another manager responds **403**, and that check runs before validation, so nothing
+about the posted sub-events is disclosed. Every sub-event must be released — an unreleased one
+responds **422** on the offending `sub_event_ids.{index}` key and the whole batch is refused.
+An exhausted quota yields a `waitlisted` participation; it is never a hard rejection.
+
+#### Promote a waitlisted participation as a guest manager
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const { data } = await new GuestManager('event-uuid').promoteSubEventParticipation(
+  'guest-manager-uuid',
+  'participation-uuid',
+  'confirmed',
+)
+```
+
+Manual promotion is the guest manager's step (AIRLST-5446); automatic/FIFO promotion is a later
+milestone. The participation must be `waitlisted`, its sub-event released, and its guest assigned
+to that manager. Every applicable quota row is re-checked under locks, so the promotion responds
+**422** while no seat is actually free.
 
 ### GuestGroup methods
 

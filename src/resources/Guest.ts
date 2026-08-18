@@ -338,7 +338,7 @@ interface CreateRecommendationResponseInterface {
   }
 }
 
-interface AssignSubEventsResponseInterface {
+export interface AssignSubEventsResponseInterface {
   data: {
     participations: Array<SubEventParticipationInterface>
     overlap_warnings: Array<SubEventOverlapWarningInterface>
