@@ -7,6 +7,7 @@ import {
   GuestsImportInterface,
   GuessImportFieldsResponseInterface,
   SubEventParticipationInterface,
+  SubEventOverlapWarningInterface,
 } from '../interfaces'
 import { Event } from './Event'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
@@ -125,16 +126,28 @@ export const Guest = class {
    * A full sub-event yields a `waitlisted` participation instead of `invited`; any
    * error rolls back the whole batch. Requires the company's `sub-events` module,
    * otherwise the API responds 400.
+   *
+   * `extendedFields` (AIRLST-5446) carries optional participation extended-field
+   * values, keyed by sub-event UUID. Only sub-events listed in `subEventIds` are
+   * accepted, and each value object is validated against that sub-event's own
+   * field definitions. The response's `overlap_warnings` lists groups of the
+   * guest's sub-events that overlap in time — a warning only, never a block.
    */
   public async assignSubEvents(
     code: string,
     subEventIds: Array<string>,
+    extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
   ): Promise<AssignSubEventsResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guests/${code}/sub-events`,
       {
         method: 'post',
-        body: JSON.stringify({ sub_event_ids: subEventIds }),
+        body: JSON.stringify({
+          sub_event_ids: subEventIds,
+          ...(extendedFields !== undefined && {
+            extended_fields: extendedFields,
+          }),
+        }),
       },
     )
   }
@@ -328,6 +341,7 @@ interface CreateRecommendationResponseInterface {
 interface AssignSubEventsResponseInterface {
   data: {
     participations: Array<SubEventParticipationInterface>
+    overlap_warnings: Array<SubEventOverlapWarningInterface>
   }
 }
 

@@ -31,6 +31,12 @@ export interface SubEventInterface {
   ends_at: string
   registration_mode: 'invitation_only' | 'open'
   /**
+   * The moment the sub-event was released for guest-manager booking (AIRLST-5446);
+   * null while it is unreleased. Independent of `registration_mode`, the
+   * guest-facing invitation-only vs open switch.
+   */
+  released_at: string | null
+  /**
    * Occupying participations only — statuses `invited` and `confirmed` (AIRLST-5445).
    */
   participations_count: number
@@ -40,16 +46,37 @@ export interface SubEventInterface {
 export interface SubEventQuotaInterface {
   id: string
   /**
-   * Null marks the default quota: it covers guests whose group has no dedicated
-   * quota row and guests without a group.
+   * Set on a guest-group row. A row with both `guest_group_id` and
+   * `guest_manager_id` null is the default quota: it covers guests whose group
+   * has no dedicated quota row and guests without a group.
    */
   guest_group_id: string | null
   /**
    * Locale-keyed guest group name; present only when `guest_group_id` is set.
    */
   guest_group_name?: { [locale: string]: string }
+  /**
+   * Set on a guest-manager row (AIRLST-5446): it limits the guests assigned to
+   * that manager, on top of their group/default row. Because a guest occupies a
+   * seat in every applicable row, the sum of `used` across rows can exceed
+   * `participations_count`.
+   */
+  guest_manager_id: string | null
+  /**
+   * The manager's contact name on guest-manager rows; null elsewhere and for an
+   * archived manager.
+   */
+  guest_manager_name: string | null
   limit: number
   used: number
+}
+
+/**
+ * One group of the guest's sub-events that overlap in time (AIRLST-5446).
+ * A warning only — the API never blocks an assignment because of an overlap.
+ */
+export interface SubEventOverlapWarningInterface {
+  sub_event_ids: Array<string>
 }
 
 interface LocaleInterface {

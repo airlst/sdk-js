@@ -19,9 +19,17 @@ test('list()', async () => {
           starts_at: '2026-09-01T09:00:00.000000Z',
           ends_at: '2026-09-01T11:00:00.000000Z',
           registration_mode: 'invitation_only',
+          released_at: '2026-08-20T08:00:00.000000Z',
           participations_count: 3,
           quotas: [
-            { id: 'quota-uuid', guest_group_id: null, limit: 20, used: 3 },
+            {
+              id: 'quota-uuid',
+              guest_group_id: null,
+              guest_manager_id: null,
+              guest_manager_name: null,
+              limit: 20,
+              used: 3,
+            },
           ],
         },
       ],
@@ -37,6 +45,44 @@ test('list()', async () => {
   expect(subEvents[0].participations_count).toBe(3)
   expect(subEvents[0].quotas[0].guest_group_id).toBeNull()
   expect(subEvents[0].quotas[0].used).toBe(3)
+  expect(subEvents[0].released_at).toBe('2026-08-20T08:00:00.000000Z')
+})
+
+test('list() exposes guest-manager quota rows', async () => {
+  // A guest-manager row (AIRLST-5446) limits the guests assigned to that manager,
+  // on top of their group/default row; an unreleased sub-event reports
+  // `released_at: null`.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [
+        {
+          id: 'sub-event-uuid',
+          name: 'Factory Tour',
+          starts_at: '2026-09-01T09:00:00.000000Z',
+          ends_at: '2026-09-01T11:00:00.000000Z',
+          registration_mode: 'invitation_only',
+          released_at: null,
+          participations_count: 3,
+          quotas: [
+            {
+              id: 'manager-quota',
+              guest_group_id: null,
+              guest_manager_id: 'manager-uuid',
+              guest_manager_name: 'Alex Smith',
+              limit: 10,
+              used: 2,
+            },
+          ],
+        },
+      ],
+    },
+  })
+
+  const subEvents = await subEvent.list()
+
+  expect(subEvents[0].released_at).toBeNull()
+  expect(subEvents[0].quotas[0].guest_manager_id).toBe('manager-uuid')
+  expect(subEvents[0].quotas[0].guest_manager_name).toBe('Alex Smith')
 })
 
 test('list() exposes the locale-keyed guest group name on a group quota', async () => {

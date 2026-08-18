@@ -53,11 +53,18 @@ const subEvents = await new SubEvent('event-uuid').list()
 
 Each sub-event carries its quota state: `participations_count` counts occupying participations
 (statuses `invited` and `confirmed`), and each entry in `quotas` reports `limit` and `used`. A
-quota with `guest_group_id: null` is the default quota — it covers guests whose group has no
-dedicated quota row and guests without a group. A quota tied to a guest group also carries
-`guest_group_name` as a locale-keyed object (`{ 'en-GB': 'VIP' }`); the default quota has no
-group, so the key is absent there. To assign guests, use `Guest.assignSubEvents()` (see the
-Guest methods).
+quota row comes in one of three shapes (AIRLST-5446): a guest-group row (`guest_group_id` set),
+a guest-manager row (`guest_manager_id` set — it limits the guests assigned to that manager, on
+top of their group/default row), or the default quota (both null) — it covers guests whose group
+has no dedicated quota row and guests without a group. A quota tied to a guest group also
+carries `guest_group_name` as a locale-keyed object (`{ 'en-GB': 'VIP' }`); a guest-manager row
+carries `guest_manager_name` as a plain string. Because a guest occupies a seat in every
+applicable row, the sum of `used` across rows can exceed `participations_count`.
+
+Each sub-event also reports `released_at` (AIRLST-5446): the moment it was released for
+guest-manager booking, or `null` while it is unreleased. It is independent of
+`registration_mode`, the guest-facing invitation-only vs open switch. To assign guests, use
+`Guest.assignSubEvents()` (see the Guest methods).
 
 #### Get temporary signed url to upload file directly to cloud storage
 
@@ -127,10 +134,11 @@ The key is absent while the module is off.
 ```javascript
 import { Guest } from '@airlst/sdk'
 
-const { data } = await new Guest('event-uuid').assignSubEvents('guest-code', [
-  'sub-event-uuid-1',
-  'sub-event-uuid-2',
-])
+const { data } = await new Guest('event-uuid').assignSubEvents(
+  'guest-code',
+  ['sub-event-uuid-1', 'sub-event-uuid-2'],
+  { 'sub-event-uuid-1': { shirt_size: 'M' } },
+)
 ```
 
 The assignment is one transaction (AIRLST-5445): a full sub-event yields a `waitlisted`
@@ -138,6 +146,14 @@ participation instead of `invited`, and any error rolls back the whole batch. Th
 reports the created participations with their per-sub-event `status`. Requires the company's
 `sub-events` module; a sub-event of another event, or one the guest already participates in,
 responds 422.
+
+The optional third argument (AIRLST-5446) carries participation extended-field values, keyed
+by sub-event UUID. Only sub-events listed in the assignment are accepted, and each value
+object is validated against that sub-event's own field definitions — unknown keys respond 422.
+
+The response also carries `overlap_warnings` (AIRLST-5446): groups of the guest's sub-events
+that overlap in time, limited to groups the just-created participations touch. It is a warning
+only — the API never blocks an assignment because of an overlap.
 
 #### Create a new guest
 

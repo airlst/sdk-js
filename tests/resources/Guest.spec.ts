@@ -77,13 +77,15 @@ test('get()', async () => {
 
 test('assignSubEvents()', async () => {
   // One transaction on the API side (AIRLST-5445): a full sub-event yields a
-  // waitlisted participation, any error rolls back the whole batch.
+  // waitlisted participation, any error rolls back the whole batch. The response
+  // also reports overlap warnings (AIRLST-5446) — a warning only, never a block.
   apiMock.mockResolvedValueOnce({
     data: {
       participations: [
         { id: 'p1', sub_event_id: 'se1', status: 'invited' },
         { id: 'p2', sub_event_id: 'se2', status: 'waitlisted' },
       ],
+      overlap_warnings: [{ sub_event_ids: ['se1', 'se2'] }],
     },
   })
 
@@ -97,6 +99,32 @@ test('assignSubEvents()', async () => {
   expect(response.data.participations).toHaveLength(2)
   expect(response.data.participations[0]?.status).toBe('invited')
   expect(response.data.participations[1]?.status).toBe('waitlisted')
+  expect(response.data.overlap_warnings).toEqual([
+    { sub_event_ids: ['se1', 'se2'] },
+  ])
+})
+
+test('assignSubEvents() sends participation extended-field values', async () => {
+  // Optional per-sub-event values (AIRLST-5446), validated by the API against the
+  // sub-event's own field definitions; only assigned sub-events are accepted.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [{ id: 'p1', sub_event_id: 'se1', status: 'invited' }],
+      overlap_warnings: [],
+    },
+  })
+
+  await guest.assignSubEvents('guest-code', ['se1'], {
+    se1: { shirt_size: 'M' },
+  })
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: '{"sub_event_ids":["se1"],"extended_fields":{"se1":{"shirt_size":"M"}}}',
+    },
+  )
 })
 
 test('get() exposes the sub-event participations', async () => {
