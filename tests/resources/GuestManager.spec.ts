@@ -253,6 +253,87 @@ test('assignGuestSubEvents() with participation extended fields', async () => {
   )
 })
 
+test('assignGuestsSubEvents()', async () => {
+  guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1', 'guest-code-2'],
+    ['sub-event-uuid-1'],
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        guests: ['guest-code-1', 'guest-code-2'],
+        sub_event_ids: ['sub-event-uuid-1'],
+      }),
+    },
+  )
+})
+
+test('assignGuestsSubEvents() with participation extended fields', async () => {
+  guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1'],
+    ['sub-event-uuid-1'],
+    { 'sub-event-uuid-1': { shirt_size: 'M' } },
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        guests: ['guest-code-1'],
+        sub_event_ids: ['sub-event-uuid-1'],
+        extended_fields: { 'sub-event-uuid-1': { shirt_size: 'M' } },
+      }),
+    },
+  )
+})
+
+test('assignGuestsSubEvents() reports each guest on its own entry', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      results: [
+        {
+          guest_code: 'guest-code-1',
+          participations: [
+            {
+              id: 'participation-uuid',
+              sub_event_id: 'sub-event-uuid-1',
+              status: 'waitlisted',
+            },
+          ],
+          overlap_warnings: [],
+          error: null,
+        },
+        {
+          guest_code: 'guest-code-2',
+          participations: [],
+          overlap_warnings: [],
+          error: 'assignment blew up',
+        },
+      ],
+    },
+  })
+
+  const { data } = await guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1', 'guest-code-2'],
+    ['sub-event-uuid-1'],
+  )
+
+  expect(data.results[0].participations[0].status).toBe('waitlisted')
+  expect(data.results[0].error).toBeNull()
+  // One guest failing never hides the rest of the call.
+  expect(data.results[1].participations).toHaveLength(0)
+  expect(data.results[1].error).toBe('assignment blew up')
+})
+
 test('assignGuestSubEvents() returns waitlisted participations and overlap warnings', async () => {
   apiMock.mockResolvedValueOnce({
     data: {

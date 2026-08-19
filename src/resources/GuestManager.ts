@@ -3,6 +3,7 @@ import {
   GuestManagerInterface,
   AttachmentInterface,
   GuestManagerSubEventContingentInterface,
+  SubEventOverlapWarningInterface,
   SubEventParticipationInterface,
 } from '../interfaces'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
@@ -179,6 +180,43 @@ export const GuestManager = class {
   }
 
   /**
+   * Books MANY of this manager's guests onto the same released sub-events (AIRLST-5446).
+   *
+   * The bulk sibling of `assignGuestSubEvents()`, bounded at 200 guests per call so it
+   * can answer synchronously with a per-guest result. Isolation is per guest: each one
+   * is assigned in its own transaction, so a guest that fails carries its own `error`
+   * while the rest of the call still books. A guest that already participates in a
+   * requested sub-event is skipped rather than rejected, which is what makes a
+   * pre-assignment safe to run twice. Every entry carries the same
+   * `participations` / `overlap_warnings` pair as the single-guest method, so one
+   * parser serves both. Results come back in the order the codes were posted.
+   *
+   * Bulk assignment exists on the guest-manager surface only — an integrator key uses
+   * `Guest.assignSubEvents()` one guest at a time, because a bulk route outside this
+   * surface would skip the manager-ownership and released-sub-event rules.
+   */
+  public async assignGuestsSubEvents(
+    guestManagerId: string,
+    codes: Array<string>,
+    subEventIds: Array<string>,
+    extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
+  ): Promise<BulkAssignSubEventsResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guest-managers/${guestManagerId}/sub-events/assignments`,
+      {
+        method: 'post',
+        body: JSON.stringify({
+          guests: codes,
+          sub_event_ids: subEventIds,
+          ...(extendedFields !== undefined && {
+            extended_fields: extendedFields,
+          }),
+        }),
+      },
+    )
+  }
+
+  /**
    * Promotes a waitlisted participation once a seat frees up (AIRLST-5446).
    *
    * Manual promotion is the guest manager's step in M2. The participation must be
@@ -249,6 +287,24 @@ interface CreateResponseInterface {
 interface UpdateResponseInterface {
   data: {
     guest: GuestManagerInterface
+  }
+}
+
+/**
+ * One guest's outcome in a bulk assignment. `error` is null when the guest was booked;
+ * an empty `participations` array with a null `error` means the guest already
+ * participated in every requested sub-event.
+ */
+export interface BulkAssignSubEventsResultInterface {
+  guest_code: string
+  participations: Array<SubEventParticipationInterface>
+  overlap_warnings: Array<SubEventOverlapWarningInterface>
+  error: string | null
+}
+
+export interface BulkAssignSubEventsResponseInterface {
+  data: {
+    results: Array<BulkAssignSubEventsResultInterface>
   }
 }
 
