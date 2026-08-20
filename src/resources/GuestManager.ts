@@ -293,7 +293,8 @@ interface UpdateResponseInterface {
 /**
  * One guest's outcome in a bulk assignment. `error` is null when the guest was booked;
  * an empty `participations` array with a null `error` means the guest already
- * participated in every requested sub-event.
+ * participated in every requested sub-event. A failure carries a stable, localized
+ * message — never the underlying exception text — and is reported server-side.
  */
 export interface BulkAssignSubEventsResultInterface {
   guest_code: string
