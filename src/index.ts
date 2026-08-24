@@ -16,6 +16,7 @@ import { QueryBuilder, QueryParameters } from './utils/QueryBuilder'
 import {
   GuestManagerInterface,
   GuestGroupInterface,
+  GuestSubEventInterface,
   SubEventInterface,
   SubEventQuotaInterface,
   SubEventParticipationInterface,
@@ -46,6 +47,7 @@ export {
   QueryParameters,
   GuestManagerInterface,
   GuestGroupInterface,
+  GuestSubEventInterface,
   SubEventInterface,
   SubEventQuotaInterface,
   SubEventParticipationInterface,

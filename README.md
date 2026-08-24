@@ -63,7 +63,9 @@ applicable row, the sum of `used` across rows can exceed `participations_count`.
 
 Each sub-event also reports `released_at` (AIRLST-5446): the moment it was released for
 guest-manager booking, or `null` while it is unreleased. It is independent of
-`registration_mode`, the guest-facing invitation-only vs open switch. To assign guests, use
+`registration_mode`, the guest-facing invitation-only vs open switch. `send_status_emails`
+(AIRLST-5447) is the per-SubEvent auto-send switch: while it is `false` (the default), real
+participation status transitions send no per-SubEvent email templates. To assign guests, use
 `Guest.assignSubEvents()` (see the Guest methods).
 
 `SubEvent.list()` is the **full integrator view**: it returns released and unreleased
@@ -159,6 +161,42 @@ object is validated against that sub-event's own field definitions — unknown k
 The response also carries `overlap_warnings` (AIRLST-5446): groups of the guest's sub-events
 that overlap in time, limited to groups the just-created participations touch. It is a warning
 only — the API never blocks an assignment because of an overlap.
+
+#### List sub-events in the context of one guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const subEvents = await new Guest('event-uuid').listSubEvents('guest-code')
+```
+
+The registration-form read (AIRLST-5447, R40): every sub-event of the event, sorted by start
+date, with the guest's own `participation` (`null` while the guest is not assigned) and a
+guest-specific `has_free_seat`. Quota rows are scoped to guest groups and guest managers, so
+whether a sub-event is "full" depends on the guest — `has_free_seat: false` means a confirm or
+a new assignment for THIS guest would be waitlisted, and the form should say so before the
+guest answers.
+
+#### Accept or decline one participation as the guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').updateSubEventParticipation(
+  'guest-code',
+  'participation-uuid',
+  'confirmed',
+)
+```
+
+The guest RSVP (AIRLST-5447): a guest only ever answers `confirmed` or `declined`. A confirm
+from the waitlist re-checks every applicable quota row under locks and responds 422 while no
+seat is actually free — the guest stays waitlisted. While the guest is cancelled on the parent
+event, a confirm responds 422 (reactivate the guest on the parent event first); a decline is
+always allowed. A participation of another guest responds 404.
+
+The optional fourth argument `sendAutomatedEmail` (default true) gates the per-SubEvent status
+email together with the sub-event's own `send_status_emails` switch.
 
 #### Create a new guest
 
@@ -425,6 +463,11 @@ import { EmailTemplate } from '@airlst/sdk'
 
 const { data } = await new EmailTemplate('event-uuid').list()
 ```
+
+Each template reports its send trigger: `booking_status_hook` (a parent booking status), or —
+mutually exclusive with it — the per-SubEvent pair `sub_event_id` + `sub_event_status_hook`
+(AIRLST-5447). A per-SubEvent template sends on a real participation status transition into
+the hooked status, and only while the sub-event's `send_status_emails` switch is on.
 
 #### Send email template to selected guests
 

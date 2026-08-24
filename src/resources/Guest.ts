@@ -6,6 +6,7 @@ import {
   AttachmentInterface,
   GuestsImportInterface,
   GuessImportFieldsResponseInterface,
+  GuestSubEventInterface,
   SubEventParticipationInterface,
   SubEventOverlapWarningInterface,
 } from '../interfaces'
@@ -146,6 +147,55 @@ export const Guest = class {
           sub_event_ids: subEventIds,
           ...(extendedFields !== undefined && {
             extended_fields: extendedFields,
+          }),
+        }),
+      },
+    )
+  }
+
+  /**
+   * Lists every sub-event of the event in the context of one guest (AIRLST-5447, R40).
+   * Sorted by start date. `participation` is null while the guest is not assigned;
+   * `has_free_seat` answers for exactly this guest — `false` means a confirm or a new
+   * assignment would be waitlisted, so a registration form should say so before the
+   * guest answers. Requires the company's `sub-events` module, otherwise the API
+   * responds 400.
+   */
+  public async listSubEvents(
+    code: string,
+  ): Promise<Array<GuestSubEventInterface>> {
+    const { data } = await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/sub-events`,
+    )
+
+    return data.sub_events
+  }
+
+  /**
+   * The guest's answer on one participation (AIRLST-5447): `confirmed` or `declined`,
+   * nothing else. A confirm from the waitlist re-checks every applicable quota row
+   * under locks and responds 422 while no seat is actually free — the guest stays
+   * waitlisted. While the guest is cancelled on the parent event, a confirm responds
+   * 422 (reactivate the guest on the parent event first); a decline is always allowed.
+   * A participation of another guest responds 404.
+   *
+   * `sendAutomatedEmail` (default true) gates the per-SubEvent status email together
+   * with the sub-event's own `send_status_emails` switch.
+   */
+  public async updateSubEventParticipation(
+    code: string,
+    participationId: string,
+    status: 'confirmed' | 'declined',
+    sendAutomatedEmail?: boolean,
+  ): Promise<UpdateSubEventParticipationResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/sub-events/participations/${participationId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status,
+          ...(sendAutomatedEmail !== undefined && {
+            send_automated_email: sendAutomatedEmail,
           }),
         }),
       },
@@ -335,6 +385,12 @@ interface CreateResponseInterface {
 interface CreateRecommendationResponseInterface {
   data: {
     guest: GuestInterface
+  }
+}
+
+interface UpdateSubEventParticipationResponseInterface {
+  data: {
+    participation: SubEventParticipationInterface
   }
 }
 

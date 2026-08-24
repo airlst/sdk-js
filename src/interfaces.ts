@@ -37,10 +37,35 @@ export interface SubEventInterface {
    */
   released_at: string | null
   /**
+   * The per-SubEvent auto-send switch (AIRLST-5447): whether real participation status
+   * transitions send the parent event's hooked per-SubEvent email templates. Off by
+   * default.
+   */
+  send_status_emails: boolean
+  /**
    * Occupying participations only — statuses `invited` and `confirmed` (AIRLST-5445).
    */
   participations_count: number
   quotas: Array<SubEventQuotaInterface>
+}
+
+/**
+ * One sub-event as the registration form sees it for one guest (AIRLST-5447, R40).
+ *
+ * Returned by `Guest.listSubEvents()`. `participation` is null while the guest is not
+ * assigned. `has_free_seat` is computed for exactly that guest — quota rows are scoped
+ * to guest groups and guest managers, so whether a sub-event is "full" depends on the
+ * guest. `false` means a confirm or a new assignment for this guest would be waitlisted.
+ */
+export interface GuestSubEventInterface {
+  id: string
+  name: string
+  starts_at: string
+  ends_at: string
+  registration_mode: 'invitation_only' | 'open'
+  released_at: string | null
+  participation: SubEventParticipationInterface | null
+  has_free_seat: boolean
 }
 
 /**
@@ -223,6 +248,24 @@ export interface EmailTemplateInterface {
     [locale: string]: string
   }
   booking_status_hook: string
+  /**
+   * Per-SubEvent status email hook (AIRLST-5447): the sub-event this template answers
+   * for, or null. Mutually exclusive with `booking_status_hook` — a template hooks a
+   * booking status or a sub-event participation status, never both.
+   */
+  sub_event_id: string | null
+  /**
+   * The participation status that triggers this template on a real transition
+   * (AIRLST-5447). Set together with `sub_event_id`; the sub-event's own
+   * `send_status_emails` switch must also be on for anything to send.
+   */
+  sub_event_status_hook:
+    | 'invited'
+    | 'confirmed'
+    | 'declined'
+    | 'cancelled'
+    | 'waitlisted'
+    | null
   uses_wallet_ticket: boolean
   uses_pdf_ticket: boolean
   uses_calendar_event: boolean

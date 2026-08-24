@@ -227,6 +227,92 @@ test('createCompanion()', async () => {
   )
 })
 
+test('listSubEvents()', async () => {
+  // The guest-context read (AIRLST-5447, R40): has_free_seat answers for exactly this
+  // guest — quota rows are group- and manager-scoped, so a guest-agnostic list cannot
+  // say "you will be waitlisted".
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [
+        {
+          id: 'se1',
+          name: 'Gala Dinner',
+          starts_at: '2026-11-05T18:00:00.000000Z',
+          ends_at: '2026-11-05T23:00:00.000000Z',
+          registration_mode: 'invitation_only',
+          released_at: null,
+          participation: { id: 'p1', sub_event_id: 'se1', status: 'invited' },
+          has_free_seat: true,
+        },
+        {
+          id: 'se2',
+          name: 'Factory Tour',
+          starts_at: '2026-11-06T09:00:00.000000Z',
+          ends_at: '2026-11-06T12:00:00.000000Z',
+          registration_mode: 'open',
+          released_at: null,
+          participation: null,
+          has_free_seat: false,
+        },
+      ],
+    },
+  })
+
+  const subEvents = await guest.listSubEvents('guest-code')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+  )
+  expect(subEvents).toHaveLength(2)
+  expect(subEvents[0]?.participation?.status).toBe('invited')
+  expect(subEvents[1]?.participation).toBeNull()
+  expect(subEvents[1]?.has_free_seat).toBe(false)
+})
+
+test('updateSubEventParticipation()', async () => {
+  // The guest RSVP (AIRLST-5447): confirmed or declined, nothing else. A confirm from
+  // the waitlist re-checks quotas and responds 422 while no seat is free.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: { id: 'p1', sub_event_id: 'se1', status: 'confirmed' },
+    },
+  })
+
+  const response = await guest.updateSubEventParticipation(
+    'guest-code',
+    'p1',
+    'confirmed',
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events/participations/p1',
+    { method: 'PATCH', body: '{"status":"confirmed"}' },
+  )
+  expect(response.data.participation.status).toBe('confirmed')
+})
+
+test('updateSubEventParticipation() sends the automated-email opt-out', async () => {
+  // send_automated_email gates the per-SubEvent status email together with the
+  // sub-event's own send_status_emails switch; the API defaults it to true.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: { id: 'p1', sub_event_id: 'se1', status: 'declined' },
+    },
+  })
+
+  await guest.updateSubEventParticipation('guest-code', 'p1', 'declined', false)
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events/participations/p1',
+    {
+      method: 'PATCH',
+      body: '{"status":"declined","send_automated_email":false}',
+    },
+  )
+})
+
 test('update()', async () => {
   guest.update('guest-code', { a: 'b' })
 
