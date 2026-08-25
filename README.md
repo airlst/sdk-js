@@ -187,6 +187,9 @@ const { data } = await new Guest('event-uuid').updateSubEventParticipation(
   'participation-uuid',
   'confirmed',
 )
+
+data.participation.status // 'confirmed'
+data.guest.status // the guest's status on the PARENT event, after the answer
 ```
 
 The guest RSVP (AIRLST-5447): a guest only ever answers `confirmed` or `declined`. A confirm
@@ -194,6 +197,16 @@ from the waitlist re-checks every applicable quota row under locks and responds 
 seat is actually free — the guest stays waitlisted. While the guest is cancelled on the parent
 event, a confirm responds 422 (reactivate the guest on the parent event first); a decline is
 always allowed. A participation of another guest responds 404.
+
+The answer also derives the guest's status on the parent event, in the same transaction, and
+reports it as `data.guest.status`: one confirmed participation makes the guest `confirmed`;
+while any participation is still `invited` or `waitlisted` the guest is `invited`; once every
+participation is `declined` or `cancelled` the guest is `cancelled`. A guest held at `listed`
+or `requested` is not moved to `invited`, and a guest in the payment-owned `unpaid` or
+`checkout` states is not moved at all — so read the field rather than assuming one of the
+three derived values. When the parent event's guest limit no longer fits the derived status
+the whole call responds 422 and nothing is written. The assign endpoints do not return this
+field: at assign time the derived value carries no information.
 
 The optional fourth argument `sendAutomatedEmail` (default true) gates the per-SubEvent status
 email together with the sub-event's own `send_status_emails` switch.

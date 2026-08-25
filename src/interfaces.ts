@@ -159,6 +159,21 @@ export interface SubEventParticipationInterface {
   status: 'invited' | 'confirmed' | 'declined' | 'cancelled' | 'waitlisted'
 }
 
+/**
+ * A guest's status on a parent event. The sub-event derivation only ever produces
+ * `confirmed`, `invited` or `cancelled` (AIRLST-5447), but a guest can hold any of these.
+ */
+export type BookingStatus =
+  | 'listed'
+  | 'invited'
+  | 'requested'
+  | 'waitlisted'
+  | 'confirmed'
+  | 'cancelled'
+  | 'declined'
+  | 'unpaid'
+  | 'checkout'
+
 export interface GuestInterface {
   id: string
   code: string

@@ -28,6 +28,7 @@ import {
   GuestsImportInterface,
   ImportableFieldInterface,
   GuessImportFieldsResponseInterface,
+  BookingStatus,
 } from './interfaces'
 
 export {
@@ -58,5 +59,6 @@ export {
   OrderLineItemInterface,
   GuestsImportInterface,
   ImportableFieldInterface,
+  BookingStatus,
   GuessImportFieldsResponseInterface,
 }

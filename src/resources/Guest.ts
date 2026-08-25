@@ -9,6 +9,7 @@ import {
   GuestSubEventInterface,
   SubEventParticipationInterface,
   SubEventOverlapWarningInterface,
+  BookingStatus,
 } from '../interfaces'
 import { Event } from './Event'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
@@ -181,6 +182,16 @@ export const Guest = class {
    *
    * `sendAutomatedEmail` (default true) gates the per-SubEvent status email together
    * with the sub-event's own `send_status_emails` switch.
+   *
+   * The answer also derives the guest's status on the PARENT event, in the same
+   * transaction, and the response reports it as `data.guest.status` (AIRLST-5447): one
+   * confirmed participation makes the guest `confirmed`; while any participation is still
+   * `invited` or `waitlisted` the guest is `invited`; once every participation is
+   * `declined` or `cancelled` the guest is `cancelled`. A guest held at `listed` or
+   * `requested` is not moved to `invited`, and a guest in the payment-owned `unpaid` or
+   * `checkout` states is not moved at all — so the reported status is the guest's real
+   * one, not necessarily one of those three. When the parent event's guest limit no
+   * longer fits the derived status the whole call responds 422 and nothing is written.
    */
   public async updateSubEventParticipation(
     code: string,
@@ -391,6 +402,14 @@ interface CreateRecommendationResponseInterface {
 interface UpdateSubEventParticipationResponseInterface {
   data: {
     participation: SubEventParticipationInterface
+    /**
+     * The guest's status on the parent event after the answer was applied
+     * (AIRLST-5447). Reported by this endpoint only: at assign time the derived value
+     * carries no information, so the assign endpoints do not return it.
+     */
+    guest: {
+      status: BookingStatus
+    }
   }
 }
 

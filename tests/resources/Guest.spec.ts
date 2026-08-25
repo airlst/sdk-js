@@ -276,6 +276,7 @@ test('updateSubEventParticipation()', async () => {
   apiMock.mockResolvedValueOnce({
     data: {
       participation: { id: 'p1', sub_event_id: 'se1', status: 'confirmed' },
+      guest: { status: 'confirmed' },
     },
   })
 
@@ -291,6 +292,28 @@ test('updateSubEventParticipation()', async () => {
     { method: 'PATCH', body: '{"status":"confirmed"}' },
   )
   expect(response.data.participation.status).toBe('confirmed')
+  // The answer also derives the guest's status on the parent event and reports it, so the
+  // caller needs no second request to render the new state (AIRLST-5447).
+  expect(response.data.guest.status).toBe('confirmed')
+})
+
+test('updateSubEventParticipation() reports the derived parent status', async () => {
+  // Every participation declined derives a CANCELLED guest — the parent status the
+  // landing page has to render after the last decline.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: { id: 'p1', sub_event_id: 'se1', status: 'declined' },
+      guest: { status: 'cancelled' },
+    },
+  })
+
+  const response = await guest.updateSubEventParticipation(
+    'guest-code',
+    'p1',
+    'declined',
+  )
+
+  expect(response.data.guest.status).toBe('cancelled')
 })
 
 test('updateSubEventParticipation() sends the automated-email opt-out', async () => {
@@ -299,6 +322,7 @@ test('updateSubEventParticipation() sends the automated-email opt-out', async ()
   apiMock.mockResolvedValueOnce({
     data: {
       participation: { id: 'p1', sub_event_id: 'se1', status: 'declined' },
+      guest: { status: 'cancelled' },
     },
   })
 
