@@ -162,6 +162,13 @@ The response also carries `overlap_warnings` (AIRLST-5446): groups of the guest'
 that overlap in time, limited to groups the just-created participations touch. It is a warning
 only — the API never blocks an assignment because of an overlap.
 
+The assignment also derives the guest's status on the parent event, silently — an assignment
+never sends a status email (AIRLST-5447). That derived status is subject to the parent event's
+guest limit, so a call that used to answer 201 can now answer 422 on `limits`, in which case
+nothing is written. The response does not report the derived status: a fresh assignment derives
+`invited`, which tells the caller nothing new. Read the parent status from
+`updateSubEventParticipation()` once the guest answers.
+
 #### List sub-events in the context of one guest
 
 ```javascript

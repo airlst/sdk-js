@@ -134,6 +134,14 @@ export const Guest = class {
    * accepted, and each value object is validated against that sub-event's own
    * field definitions. The response's `overlap_warnings` lists groups of the
    * guest's sub-events that overlap in time — a warning only, never a block.
+   *
+   * The assignment also derives the guest's status on the parent event, silently —
+   * it never sends a status email (AIRLST-5447). That derived status is subject to
+   * the parent event's guest limit, so a call that used to answer 201 can answer
+   * 422 on `limits`, in which case nothing is written. The response does not carry
+   * the derived status: a fresh assignment derives `invited`, which says nothing
+   * the caller does not already know. Read it from `updateSubEventParticipation()`
+   * once the guest answers.
    */
   public async assignSubEvents(
     code: string,
