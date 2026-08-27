@@ -169,6 +169,9 @@ test('listSubEvents()', async () => {
           booked: 7,
           limit: 20,
           remaining: 13,
+          guest_group_limit: 40,
+          guest_group_used: 31,
+          guest_group_remaining: 9,
         },
       ],
     },
@@ -184,11 +187,17 @@ test('listSubEvents()', async () => {
   expect(subEvents[0].booked).toBe(7)
   expect(subEvents[0].limit).toBe(20)
   expect(subEvents[0].remaining).toBe(13)
+  // The other contingent the manager books against: the row of its own guest group
+  // (AIRLST-5534). Counted across the whole group, not only this manager's guests.
+  expect(subEvents[0].guest_group_limit).toBe(40)
+  expect(subEvents[0].guest_group_used).toBe(31)
+  expect(subEvents[0].guest_group_remaining).toBe(9)
 })
 
 test('listSubEvents() reports an unlimited manager dimension', async () => {
-  // The manager owns no quota row on this sub-event, so limit and remaining are
-  // null — but the usage is still reported (AIRLST-5446).
+  // The manager owns no quota row on this sub-event — it reached the sub-event through
+  // its guest group, so its own limit and remaining are null while the group numbers
+  // carry the contingent. The usage is still reported (AIRLST-5446/AIRLST-5534).
   apiMock.mockResolvedValueOnce({
     data: {
       sub_events: [
@@ -202,6 +211,9 @@ test('listSubEvents() reports an unlimited manager dimension', async () => {
           booked: 2,
           limit: null,
           remaining: null,
+          guest_group_limit: 40,
+          guest_group_used: 12,
+          guest_group_remaining: 28,
         },
       ],
     },
@@ -212,6 +224,40 @@ test('listSubEvents() reports an unlimited manager dimension', async () => {
   expect(subEvents[0].booked).toBe(2)
   expect(subEvents[0].limit).toBeNull()
   expect(subEvents[0].remaining).toBeNull()
+  expect(subEvents[0].guest_group_limit).toBe(40)
+  expect(subEvents[0].guest_group_remaining).toBe(28)
+})
+
+test('listSubEvents() reports no guest-group contingent for a manager without a group', async () => {
+  // The manager reached the sub-event through its own row, and books against the default
+  // row — whose numbers are not its business, so all three group fields stay null.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [
+        {
+          id: 'sub-event-uuid',
+          name: 'Factory Tour',
+          starts_at: '2027-05-05T09:00:00.000000Z',
+          ends_at: '2027-05-05T17:00:00.000000Z',
+          registration_mode: 'invitation_only',
+          released_at: '2026-08-20T08:00:00.000000Z',
+          booked: 1,
+          limit: 5,
+          remaining: 4,
+          guest_group_limit: null,
+          guest_group_used: null,
+          guest_group_remaining: null,
+        },
+      ],
+    },
+  })
+
+  const subEvents = await guestManager.listSubEvents('guest-manager-uuid')
+
+  expect(subEvents[0].limit).toBe(5)
+  expect(subEvents[0].guest_group_limit).toBeNull()
+  expect(subEvents[0].guest_group_used).toBeNull()
+  expect(subEvents[0].guest_group_remaining).toBeNull()
 })
 
 test('assignGuestSubEvents()', async () => {

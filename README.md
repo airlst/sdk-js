@@ -70,8 +70,9 @@ participation status transitions send no per-SubEvent email templates. To assign
 
 `SubEvent.list()` is the **full integrator view**: it returns released and unreleased
 sub-events alike, and `released_at` is what tells them apart. A guest-manager-facing consumer
-must not read it — use `GuestManager.listSubEvents()` instead, which returns released
-sub-events only and reports the acting manager's own contingent.
+must not read it — use `GuestManager.listSubEvents()` instead, which returns only the sub-events
+the acting manager can reach (released AND covered by a quota row for the manager or its guest
+group) and reports that manager's own contingent.
 
 #### Get temporary signed url to upload file directly to cloud storage
 
@@ -412,17 +413,31 @@ import { GuestManager } from '@airlst/sdk'
 const subEvents = await new GuestManager('event-uuid').listSubEvents('guest-manager-uuid')
 ```
 
-The contingent view of the guest-manager portal (AIRLST-5446). Guest managers exist only on the
-parent event, and a parent-scoped manager acts across the parent and its released sub-events —
-so the manager is named by its UUID and a manager of another event answers 404. Only **released**
-sub-events appear; use `SubEvent.list()` for the full integrator view.
+The contingent view of the guest-manager portal (AIRLST-5446/AIRLST-5534). Guest managers exist
+only on the parent event, so the manager is named by its UUID and a manager of another event
+answers 404.
+
+A manager **reaches** a sub-event when BOTH hold: it is released, AND it carries an applicable
+quota row — a row for this manager, or a row for the manager's own guest group. The **default**
+row grants nothing: it is the fallback that catches everyone, so a released sub-event carrying
+only a default row does not appear. An **exhausted** row still grants access — a full contingent
+waitlists a booking, it does not hide the sub-event. Unreachable sub-events are absent; use
+`SubEvent.list()` for the full integrator view.
 
 Each entry reports `booked` — the occupying participations (`invited` and `confirmed`) of this
 manager's guests — plus `limit` and `remaining` from the manager's own quota row. `limit` and
-`remaining` are `null` when the manager has no row: the manager dimension is then unlimited,
-though the sub-event's guest-group or default quota still applies when a guest is booked.
-`remaining` never goes below 0. Quota rows of guest groups, the default row and the rows of
-other managers are never exposed here. Requires the company's `sub-events` module.
+`remaining` are `null` when the manager has no row of its own: the manager dimension is then
+unlimited, and the manager reached the sub-event through its guest group.
+
+`guest_group_limit`, `guest_group_used` and `guest_group_remaining` report the row of the
+manager's **own guest group** — the other contingent it books against. All three are `null` when
+the manager has no guest group, or when its group owns no row on this sub-event (the manager then
+books against the default row, whose numbers are not its business). `guest_group_used` counts
+every guest of that group, not only the ones this manager brought.
+
+Neither `remaining` nor `guest_group_remaining` goes below 0. Quota rows themselves — of guest
+groups, of the default dimension and of other managers — are never exposed here. Requires the
+company's `sub-events` module.
 
 #### Book a guest onto sub-events as a guest manager
 

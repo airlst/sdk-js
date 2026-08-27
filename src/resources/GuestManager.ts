@@ -130,14 +130,15 @@ export const GuestManager = class {
   }
 
   /**
-   * The contingent view of the guest-manager portal (AIRLST-5446).
+   * The contingent view of the guest-manager portal (AIRLST-5446/AIRLST-5534).
    *
-   * Returns the RELEASED sub-events of the parent event with this manager's own
-   * quota state. Guest managers exist only on the parent event, and a parent-scoped
-   * manager acts across the parent and its released sub-events — so the manager is
-   * named by `guestManagerId`, and a manager of another event answers 404.
-   * Unreleased sub-events are absent; use `SubEvent.list()` for the full
-   * integrator view.
+   * Returns the sub-events of the parent event this manager can REACH, with its own
+   * quota state. A manager reaches a sub-event when BOTH hold: it is released, AND it
+   * carries an applicable quota row — a row for this manager, or a row for the manager's
+   * own guest group. The default row grants nothing; an exhausted row still grants
+   * access. Guest managers exist only on the parent event, so the manager is named by
+   * `guestManagerId`, and a manager of another event answers 404. Unreachable sub-events
+   * are absent; use `SubEvent.list()` for the full integrator view.
    */
   public async listSubEvents(
     guestManagerId: string,

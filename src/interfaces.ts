@@ -69,13 +69,17 @@ export interface GuestSubEventInterface {
 }
 
 /**
- * One released sub-event as the acting guest manager sees it (AIRLST-5446).
+ * One reachable sub-event as the acting guest manager sees it (AIRLST-5446/AIRLST-5534).
  *
- * Returned by `GuestManager.listSubEvents()`. The manager gets its OWN contingent
- * only — guest-group rows, the default row and the rows of other managers are never
- * exposed on this surface. Unreleased sub-events are absent entirely; read
- * `SubEvent.list()` (the full integrator view) to see released and unreleased
- * sub-events alike.
+ * Returned by `GuestManager.listSubEvents()`. A manager reaches a sub-event when BOTH
+ * hold: it is released, AND it carries an applicable quota row — a row for this manager,
+ * or a row for the manager's own guest group. The DEFAULT row grants nothing, and an
+ * EXHAUSTED row still grants access (a full contingent waitlists a booking rather than
+ * hiding the sub-event). Unreachable sub-events are absent entirely; read
+ * `SubEvent.list()` (the full integrator view) to see every sub-event.
+ *
+ * Quota ROWS are never exposed on this surface — not the manager's, not the group's, not
+ * the default one. The numbers below are all a manager gets.
  */
 export interface GuestManagerSubEventContingentInterface {
   id: string
@@ -94,14 +98,33 @@ export interface GuestManagerSubEventContingentInterface {
   booked: number
   /**
    * The limit of the manager's own quota row, or null when the manager has no row:
-   * the manager dimension is then unlimited, though the sub-event's guest-group or
-   * default quota still applies when a guest is booked.
+   * the manager dimension is then unlimited, and the manager reached this sub-event
+   * through its guest group instead.
    */
   limit: number | null
   /**
    * `limit - booked`, never below 0. Null whenever `limit` is null.
    */
   remaining: number | null
+  /**
+   * The limit of the row belonging to the manager's OWN guest group (AIRLST-5534).
+   *
+   * Null when the manager has no guest group, or when its group owns no row on this
+   * sub-event — the manager then books against the default row, whose numbers are not
+   * its business.
+   */
+  guest_group_limit: number | null
+  /**
+   * Occupying participations counted against that guest-group row. Unlike `booked`, this
+   * counts EVERY guest of the group, not only the ones this manager brought. Null exactly
+   * when `guest_group_limit` is null.
+   */
+  guest_group_used: number | null
+  /**
+   * `guest_group_limit - guest_group_used`, never below 0. Null exactly when
+   * `guest_group_limit` is null.
+   */
+  guest_group_remaining: number | null
 }
 
 export interface SubEventQuotaInterface {
