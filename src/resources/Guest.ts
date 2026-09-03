@@ -6,6 +6,10 @@ import {
   AttachmentInterface,
   GuestsImportInterface,
   GuessImportFieldsResponseInterface,
+  GuestSubEventInterface,
+  SubEventParticipationInterface,
+  SubEventOverlapWarningInterface,
+  BookingStatus,
 } from '../interfaces'
 import { Event } from './Event'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
@@ -115,6 +119,116 @@ export const Guest = class {
       {
         method: 'post',
         body: JSON.stringify(body),
+      },
+    )
+  }
+
+  /**
+   * Assigns the guest to sub-events of the event in one transaction (AIRLST-5445).
+   * A full sub-event yields a `waitlisted` participation instead of `invited`; any
+   * error rolls back the whole batch. Requires the company's `sub-events` module,
+   * otherwise the API responds 400.
+   *
+   * `extendedFields` (AIRLST-5446) carries optional participation extended-field
+   * values, keyed by sub-event UUID. Only sub-events listed in `subEventIds` are
+   * accepted, and each value object is validated against that sub-event's own
+   * field definitions. The response's `overlap_warnings` lists groups of the
+   * guest's sub-events that overlap in time — a warning only, never a block.
+   *
+   * The assignment also derives the guest's status on the parent event, silently —
+   * it never sends a status email (AIRLST-5447). That derived status is subject to
+   * the parent event's guest limit, so a call that used to answer 201 can answer
+   * 422 on `limits`, in which case nothing is written. The response does not carry
+   * the derived status: a fresh assignment derives `invited`, which says nothing
+   * the caller does not already know. Read it from `updateSubEventParticipation()`
+   * once the guest answers.
+   *
+   * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) turns the per-sub-event
+   * decision into an all-or-nothing one: when ANY requested sub-event has no free seat
+   * for this guest, EVERY participation of the call is created as `waitlisted` instead
+   * of only the exhausted one. The trigger is the quota verdict, whichever applicable
+   * row produced it — the guest's group row, a guest-manager row, or the default row. A
+   * waitlisted participation occupies no seat, so the free sub-events keep theirs and
+   * the guest can be promoted one participation at a time later.
+   */
+  public async assignSubEvents(
+    code: string,
+    subEventIds: Array<string>,
+    extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
+    waitlistAllSubeventsOnLimit?: boolean,
+  ): Promise<AssignSubEventsResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/sub-events`,
+      {
+        method: 'post',
+        body: JSON.stringify({
+          sub_event_ids: subEventIds,
+          ...(extendedFields !== undefined && {
+            extended_fields: extendedFields,
+          }),
+          ...(waitlistAllSubeventsOnLimit !== undefined && {
+            waitlist_all_subevents_on_limit: waitlistAllSubeventsOnLimit,
+          }),
+        }),
+      },
+    )
+  }
+
+  /**
+   * Lists every sub-event of the event in the context of one guest (AIRLST-5447, R40).
+   * Sorted by start date. `participation` is null while the guest is not assigned;
+   * `has_free_seat` answers for exactly this guest — `false` means a confirm or a new
+   * assignment would be waitlisted, so a registration form should say so before the
+   * guest answers. Requires the company's `sub-events` module, otherwise the API
+   * responds 400.
+   */
+  public async listSubEvents(
+    code: string,
+  ): Promise<Array<GuestSubEventInterface>> {
+    const { data } = await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/sub-events`,
+    )
+
+    return data.sub_events
+  }
+
+  /**
+   * The guest's answer on one participation (AIRLST-5447): `confirmed` or `declined`,
+   * nothing else. A confirm from the waitlist re-checks every applicable quota row
+   * under locks and responds 422 while no seat is actually free — the guest stays
+   * waitlisted. While the guest is cancelled on the parent event, a confirm responds
+   * 422 (reactivate the guest on the parent event first); a decline is always allowed.
+   * A participation of another guest responds 404.
+   *
+   * `sendAutomatedEmail` (default true) gates the per-SubEvent status email together
+   * with the sub-event's own `send_status_emails` switch.
+   *
+   * The answer also derives the guest's status on the PARENT event, in the same
+   * transaction, and the response reports it as `data.guest.status` (AIRLST-5447): one
+   * confirmed participation makes the guest `confirmed`; while any participation is still
+   * `invited` or `waitlisted` the guest is `invited`; once every participation is
+   * `declined` or `cancelled` the guest is `cancelled`. A guest held at `listed` or
+   * `requested` is not moved to `invited`, and a guest in the payment-owned `unpaid` or
+   * `checkout` states is not moved at all — so the reported status is the guest's real
+   * one, not necessarily one of those three. When the parent event's guest limit no
+   * longer fits the derived status the whole call responds 422 and nothing is written.
+   */
+  public async updateSubEventParticipation(
+    code: string,
+    participationId: string,
+    status: 'confirmed' | 'declined',
+    sendAutomatedEmail?: boolean,
+  ): Promise<UpdateSubEventParticipationResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/sub-events/participations/${participationId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status,
+          ...(sendAutomatedEmail !== undefined && {
+            send_automated_email: sendAutomatedEmail,
+          }),
+        }),
       },
     )
   }
@@ -305,6 +419,27 @@ interface CreateRecommendationResponseInterface {
   }
 }
 
+interface UpdateSubEventParticipationResponseInterface {
+  data: {
+    participation: SubEventParticipationInterface
+    /**
+     * The guest's status on the parent event after the answer was applied
+     * (AIRLST-5447). Reported by this endpoint only: at assign time the derived value
+     * carries no information, so the assign endpoints do not return it.
+     */
+    guest: {
+      status: BookingStatus
+    }
+  }
+}
+
+export interface AssignSubEventsResponseInterface {
+  data: {
+    participations: Array<SubEventParticipationInterface>
+    overlap_warnings: Array<SubEventOverlapWarningInterface>
+  }
+}
+
 interface UpdateResponseInterface {
   data: {
     guest: GuestInterface
@@ -417,4 +552,11 @@ export interface ProcessGuestImportBodyInterface {
   defaults: GuestImportDefaultsInterface
   required_fields?: Array<string>
   marketing_opt_in_setting: 'present' | 'not_present' | 'individual'
+  // AIRLST-5578, "create" imports only. When true and any SubEvent a row names has no
+  // free seat for that guest, EVERY SubEvent of that row is assigned as `waitlisted`
+  // instead of only the exhausted one. It governs the membership columns only: a
+  // per-SubEvent column naming an explicit status still wins. It does NOT make the
+  // import transactional — valid rows are still imported while invalid rows are
+  // reported. Defaults to false.
+  waitlist_all_subevents_on_limit?: boolean
 }

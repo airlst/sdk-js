@@ -75,6 +75,123 @@ test('get()', async () => {
   expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/guest-code')
 })
 
+test('assignSubEvents()', async () => {
+  // One transaction on the API side (AIRLST-5445): a full sub-event yields a
+  // waitlisted participation, any error rolls back the whole batch. The response
+  // also reports overlap warnings (AIRLST-5446) — a warning only, never a block.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [
+        { id: 'p1', sub_event_id: 'se1', status: 'invited' },
+        { id: 'p2', sub_event_id: 'se2', status: 'waitlisted' },
+      ],
+      overlap_warnings: [{ sub_event_ids: ['se1', 'se2'] }],
+    },
+  })
+
+  const response = await guest.assignSubEvents('guest-code', ['se1', 'se2'])
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+    { method: 'post', body: '{"sub_event_ids":["se1","se2"]}' },
+  )
+  expect(response.data.participations).toHaveLength(2)
+  expect(response.data.participations[0]?.status).toBe('invited')
+  expect(response.data.participations[1]?.status).toBe('waitlisted')
+  expect(response.data.overlap_warnings).toEqual([
+    { sub_event_ids: ['se1', 'se2'] },
+  ])
+})
+
+test('assignSubEvents() sends participation extended-field values', async () => {
+  // Optional per-sub-event values (AIRLST-5446), validated by the API against the
+  // sub-event's own field definitions; only assigned sub-events are accepted.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [{ id: 'p1', sub_event_id: 'se1', status: 'invited' }],
+      overlap_warnings: [],
+    },
+  })
+
+  await guest.assignSubEvents('guest-code', ['se1'], {
+    se1: { shirt_size: 'M' },
+  })
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: '{"sub_event_ids":["se1"],"extended_fields":{"se1":{"shirt_size":"M"}}}',
+    },
+  )
+})
+
+test('assignSubEvents() sends the all-or-nothing waitlist flag', async () => {
+  // AIRLST-5578: one full sub-event waitlists every participation of the call.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [
+        { id: 'p1', sub_event_id: 'se1', status: 'waitlisted' },
+        { id: 'p2', sub_event_id: 'se2', status: 'waitlisted' },
+      ],
+      overlap_warnings: [],
+    },
+  })
+
+  await guest.assignSubEvents('guest-code', ['se1', 'se2'], undefined, true)
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: '{"sub_event_ids":["se1","se2"],"waitlist_all_subevents_on_limit":true}',
+    },
+  )
+})
+
+test('assignSubEvents() omits the waitlist flag when it is not given', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { participations: [], overlap_warnings: [] },
+  })
+
+  await guest.assignSubEvents('guest-code', ['se1'])
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: '{"sub_event_ids":["se1"]}',
+    },
+  )
+})
+
+test('get() exposes the sub-event participations', async () => {
+  // Present only while the company's `sub-events` module is active (AIRLST-5445);
+  // the key is absent otherwise. Assigning guests happens through assignSubEvents().
+  apiMock.mockResolvedValueOnce({
+    data: {
+      guest: {
+        code: 'guest-code',
+        sub_event_participations: [
+          { id: 'p1', sub_event_id: 'se1', status: 'invited' },
+          { id: 'p2', sub_event_id: 'se2', status: 'waitlisted' },
+        ],
+      },
+    },
+  })
+
+  const response = await guest.get('guest-code')
+
+  expect(response.data.guest.sub_event_participations).toHaveLength(2)
+  expect(response.data.guest.sub_event_participations?.[0]?.status).toBe(
+    'invited',
+  )
+  expect(response.data.guest.sub_event_participations?.[1]?.sub_event_id).toBe(
+    'se2',
+  )
+})
+
 test('create()', async () => {
   guest.create({ a: 'b' })
 
@@ -145,6 +262,116 @@ test('createCompanion()', async () => {
     {
       method: 'post',
       body: '{"a":"b"}',
+    },
+  )
+})
+
+test('listSubEvents()', async () => {
+  // The guest-context read (AIRLST-5447, R40): has_free_seat answers for exactly this
+  // guest — quota rows are group- and manager-scoped, so a guest-agnostic list cannot
+  // say "you will be waitlisted".
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [
+        {
+          id: 'se1',
+          name: 'Gala Dinner',
+          starts_at: '2026-11-05T18:00:00.000000Z',
+          ends_at: '2026-11-05T23:00:00.000000Z',
+          registration_mode: 'invitation_only',
+          released_at: null,
+          participation: { id: 'p1', sub_event_id: 'se1', status: 'invited' },
+          has_free_seat: true,
+        },
+        {
+          id: 'se2',
+          name: 'Factory Tour',
+          starts_at: '2026-11-06T09:00:00.000000Z',
+          ends_at: '2026-11-06T12:00:00.000000Z',
+          registration_mode: 'open',
+          released_at: null,
+          participation: null,
+          has_free_seat: false,
+        },
+      ],
+    },
+  })
+
+  const subEvents = await guest.listSubEvents('guest-code')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+  )
+  expect(subEvents).toHaveLength(2)
+  expect(subEvents[0]?.participation?.status).toBe('invited')
+  expect(subEvents[1]?.participation).toBeNull()
+  expect(subEvents[1]?.has_free_seat).toBe(false)
+})
+
+test('updateSubEventParticipation()', async () => {
+  // The guest RSVP (AIRLST-5447): confirmed or declined, nothing else. A confirm from
+  // the waitlist re-checks quotas and responds 422 while no seat is free.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: { id: 'p1', sub_event_id: 'se1', status: 'confirmed' },
+      guest: { status: 'confirmed' },
+    },
+  })
+
+  const response = await guest.updateSubEventParticipation(
+    'guest-code',
+    'p1',
+    'confirmed',
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events/participations/p1',
+    { method: 'PATCH', body: '{"status":"confirmed"}' },
+  )
+  expect(response.data.participation.status).toBe('confirmed')
+  // The answer also derives the guest's status on the parent event and reports it, so the
+  // caller needs no second request to render the new state (AIRLST-5447).
+  expect(response.data.guest.status).toBe('confirmed')
+})
+
+test('updateSubEventParticipation() reports the derived parent status', async () => {
+  // Every participation declined derives a CANCELLED guest — the parent status the
+  // landing page has to render after the last decline.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: { id: 'p1', sub_event_id: 'se1', status: 'declined' },
+      guest: { status: 'cancelled' },
+    },
+  })
+
+  const response = await guest.updateSubEventParticipation(
+    'guest-code',
+    'p1',
+    'declined',
+  )
+
+  expect(response.data.guest.status).toBe('cancelled')
+})
+
+test('updateSubEventParticipation() sends the automated-email opt-out', async () => {
+  // send_automated_email gates the per-SubEvent status email together with the
+  // sub-event's own send_status_emails switch; the API defaults it to true.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: { id: 'p1', sub_event_id: 'se1', status: 'declined' },
+      guest: { status: 'cancelled' },
+    },
+  })
+
+  await guest.updateSubEventParticipation('guest-code', 'p1', 'declined', false)
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events/participations/p1',
+    {
+      method: 'PATCH',
+      body: '{"status":"declined","send_automated_email":false}',
     },
   )
 })
@@ -330,6 +557,27 @@ test('processImport()', async () => {
     action: Guest.ImportAction.CREATE,
     defaults: { 'guest:status': 'confirmed' },
     marketing_opt_in_setting: Guest.MarketingOptInSetting.NOT_PRESENT,
+  }
+
+  guest.processImport(body)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/import', {
+    method: 'post',
+    body: JSON.stringify(body),
+  })
+})
+
+test('processImport() carries the SubEvent all-or-nothing waitlist flag', async () => {
+  // AIRLST-5578: a per-import switch, so it rides in the body of this one request.
+  const body = {
+    file: 'tmp/mock-key',
+    first_row_as_header: true,
+    mapped_fields: ['contact:email', 'subEvent:sub_events'],
+    action: Guest.ImportAction.CREATE,
+    defaults: { 'guest:status': 'confirmed' },
+    marketing_opt_in_setting: Guest.MarketingOptInSetting.NOT_PRESENT,
+    waitlist_all_subevents_on_limit: true,
   }
 
   guest.processImport(body)

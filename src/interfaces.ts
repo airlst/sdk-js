@@ -14,6 +14,153 @@ export interface EventInterface {
    * by a user *from* before sending it back (AIRLST-5311).
    */
   timezone: string
+  /**
+   * Whether the event has sub-events (AIRLST-5445). Shorthand for `sub_events_count > 0`.
+   */
+  is_parent: boolean
+  /**
+   * Number of sub-events of the event (AIRLST-5445).
+   */
+  sub_events_count: number
+}
+
+export interface SubEventInterface {
+  id: string
+  name: string
+  starts_at: string
+  ends_at: string
+  registration_mode: 'invitation_only' | 'open'
+  /**
+   * The moment the sub-event was released for guest-manager booking (AIRLST-5446);
+   * null while it is unreleased. Independent of `registration_mode`, the
+   * guest-facing invitation-only vs open switch.
+   */
+  released_at: string | null
+  /**
+   * The per-SubEvent auto-send switch (AIRLST-5447): whether real participation status
+   * transitions send the parent event's hooked per-SubEvent email templates. Off by
+   * default.
+   */
+  send_status_emails: boolean
+  /**
+   * Occupying participations only — statuses `invited` and `confirmed` (AIRLST-5445).
+   */
+  participations_count: number
+  quotas: Array<SubEventQuotaInterface>
+}
+
+/**
+ * One sub-event as the registration form sees it for one guest (AIRLST-5447, R40).
+ *
+ * Returned by `Guest.listSubEvents()`. `participation` is null while the guest is not
+ * assigned. `has_free_seat` is computed for exactly that guest — quota rows are scoped
+ * to guest groups and guest managers, so whether a sub-event is "full" depends on the
+ * guest. `false` means a confirm or a new assignment for this guest would be waitlisted.
+ */
+export interface GuestSubEventInterface {
+  id: string
+  name: string
+  starts_at: string
+  ends_at: string
+  registration_mode: 'invitation_only' | 'open'
+  released_at: string | null
+  participation: SubEventParticipationInterface | null
+  has_free_seat: boolean
+}
+
+/**
+ * One reachable sub-event as the acting guest manager sees it (AIRLST-5446/AIRLST-5534).
+ *
+ * Returned by `GuestManager.listSubEvents()`. A manager reaches a sub-event when BOTH
+ * hold: it is released, AND it carries an applicable quota row — a row for this manager,
+ * or a row for the manager's own guest group. The DEFAULT row grants nothing, and an
+ * EXHAUSTED row still grants access (a full contingent waitlists a booking rather than
+ * hiding the sub-event). Unreachable sub-events are absent entirely; read
+ * `SubEvent.list()` (the full integrator view) to see every sub-event.
+ *
+ * Quota ROWS are never exposed on this surface — not the manager's, not the group's, not
+ * the default one. The numbers below are all a manager gets.
+ */
+export interface GuestManagerSubEventContingentInterface {
+  id: string
+  name: string
+  starts_at: string
+  ends_at: string
+  registration_mode: 'invitation_only' | 'open'
+  /**
+   * Never null on this surface: the list returns released sub-events only.
+   */
+  released_at: string
+  /**
+   * Occupying participations — statuses `invited` and `confirmed` — of THIS
+   * manager's guests. Always reported, also when the manager has no quota row.
+   */
+  booked: number
+  /**
+   * The limit of the manager's own quota row, or null when the manager has no row:
+   * the manager dimension is then unlimited, and the manager reached this sub-event
+   * through its guest group instead.
+   */
+  limit: number | null
+  /**
+   * `limit - booked`, never below 0. Null whenever `limit` is null.
+   */
+  remaining: number | null
+  /**
+   * The limit of the row belonging to the manager's OWN guest group (AIRLST-5534).
+   *
+   * Null when the manager has no guest group, or when its group owns no row on this
+   * sub-event — the manager then books against the default row, whose numbers are not
+   * its business.
+   */
+  guest_group_limit: number | null
+  /**
+   * Occupying participations counted against that guest-group row. Unlike `booked`, this
+   * counts EVERY guest of the group, not only the ones this manager brought. Null exactly
+   * when `guest_group_limit` is null.
+   */
+  guest_group_used: number | null
+  /**
+   * `guest_group_limit - guest_group_used`, never below 0. Null exactly when
+   * `guest_group_limit` is null.
+   */
+  guest_group_remaining: number | null
+}
+
+export interface SubEventQuotaInterface {
+  id: string
+  /**
+   * Set on a guest-group row. A row with both `guest_group_id` and
+   * `guest_manager_id` null is the default quota: it covers guests whose group
+   * has no dedicated quota row and guests without a group.
+   */
+  guest_group_id: string | null
+  /**
+   * Locale-keyed guest group name; present only when `guest_group_id` is set.
+   */
+  guest_group_name?: { [locale: string]: string }
+  /**
+   * Set on a guest-manager row (AIRLST-5446): it limits the guests assigned to
+   * that manager, on top of their group/default row. Because a guest occupies a
+   * seat in every applicable row, the sum of `used` across rows can exceed
+   * `participations_count`.
+   */
+  guest_manager_id: string | null
+  /**
+   * The manager's contact name on guest-manager rows; null elsewhere and for an
+   * archived manager.
+   */
+  guest_manager_name: string | null
+  limit: number
+  used: number
+}
+
+/**
+ * One group of the guest's sub-events that overlap in time (AIRLST-5446).
+ * A warning only — the API never blocks an assignment because of an overlap.
+ */
+export interface SubEventOverlapWarningInterface {
+  sub_event_ids: Array<string>
 }
 
 interface LocaleInterface {
@@ -28,6 +175,27 @@ export interface GuestGroupInterface {
     [locale: string]: string
   }
 }
+
+export interface SubEventParticipationInterface {
+  id: string
+  sub_event_id: string
+  status: 'invited' | 'confirmed' | 'declined' | 'cancelled' | 'waitlisted'
+}
+
+/**
+ * A guest's status on a parent event. The sub-event derivation only ever produces
+ * `confirmed`, `invited` or `cancelled` (AIRLST-5447), but a guest can hold any of these.
+ */
+export type BookingStatus =
+  | 'listed'
+  | 'invited'
+  | 'requested'
+  | 'waitlisted'
+  | 'confirmed'
+  | 'cancelled'
+  | 'declined'
+  | 'unpaid'
+  | 'checkout'
 
 export interface GuestInterface {
   id: string
@@ -45,6 +213,12 @@ export interface GuestInterface {
   companion_guests?: Array<GuestInterface>
   recommended_by?: GuestInterface
   recommended_guests?: Array<GuestInterface>
+  /**
+   * The guest's sub-event participations with their per-sub-event status (AIRLST-5445).
+   * Only on `Guest.get()`, and only while the company's `sub-events` module is active —
+   * the key is absent otherwise, and on the nested guest objects of a response.
+   */
+  sub_event_participations?: Array<SubEventParticipationInterface>
 }
 
 export interface GuestManagerInterface
@@ -112,6 +286,24 @@ export interface EmailTemplateInterface {
     [locale: string]: string
   }
   booking_status_hook: string
+  /**
+   * Per-SubEvent status email hook (AIRLST-5447): the sub-event this template answers
+   * for, or null. Mutually exclusive with `booking_status_hook` — a template hooks a
+   * booking status or a sub-event participation status, never both.
+   */
+  sub_event_id: string | null
+  /**
+   * The participation status that triggers this template on a real transition
+   * (AIRLST-5447). Set together with `sub_event_id`; the sub-event's own
+   * `send_status_emails` switch must also be on for anything to send.
+   */
+  sub_event_status_hook:
+    | 'invited'
+    | 'confirmed'
+    | 'declined'
+    | 'cancelled'
+    | 'waitlisted'
+    | null
   uses_wallet_ticket: boolean
   uses_pdf_ticket: boolean
   uses_calendar_event: boolean

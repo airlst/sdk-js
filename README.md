@@ -40,6 +40,40 @@ import { Event } from '@airlst/sdk'
 const { data } = await new Event().get('event-uuid')
 ```
 
+Every event object also reports its sub-event state (AIRLST-5445): `is_parent` (boolean) and
+`sub_events_count` (integer).
+
+#### List sub-events of an event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvents = await new SubEvent('event-uuid').list()
+```
+
+Each sub-event carries its quota state: `participations_count` counts occupying participations
+(statuses `invited` and `confirmed`), and each entry in `quotas` reports `limit` and `used`. A
+quota row comes in one of three shapes (AIRLST-5446): a guest-group row (`guest_group_id` set),
+a guest-manager row (`guest_manager_id` set — it limits the guests assigned to that manager, on
+top of their group/default row), or the default quota (both null) — it covers guests whose group
+has no dedicated quota row and guests without a group. A quota tied to a guest group also
+carries `guest_group_name` as a locale-keyed object (`{ 'en-GB': 'VIP' }`); a guest-manager row
+carries `guest_manager_name` as a plain string. Because a guest occupies a seat in every
+applicable row, the sum of `used` across rows can exceed `participations_count`.
+
+Each sub-event also reports `released_at` (AIRLST-5446): the moment it was released for
+guest-manager booking, or `null` while it is unreleased. It is independent of
+`registration_mode`, the guest-facing invitation-only vs open switch. `send_status_emails`
+(AIRLST-5447) is the per-SubEvent auto-send switch: while it is `false` (the default), real
+participation status transitions send no per-SubEvent email templates. To assign guests, use
+`Guest.assignSubEvents()` (see the Guest methods).
+
+`SubEvent.list()` is the **full integrator view**: it returns released and unreleased
+sub-events alike, and `released_at` is what tells them apart. A guest-manager-facing consumer
+must not read it — use `GuestManager.listSubEvents()` instead, which returns only the sub-events
+the acting manager can reach (released AND covered by a quota row for the manager or its guest
+group) and reports that manager's own contingent.
+
 #### Get temporary signed url to upload file directly to cloud storage
 
 ```javascript
@@ -97,6 +131,101 @@ import { Guest } from '@airlst/sdk'
 
 const { data } = await new Guest('event-uuid').get('guest-code')
 ```
+
+When the company's `sub-events` module is active, the guest object also carries
+`sub_event_participations` (AIRLST-5445): the guest's sub-event participations with their
+per-sub-event `status` (`invited`, `confirmed`, `declined`, `cancelled` or `waitlisted`).
+The key is absent while the module is off.
+
+#### Assign a guest to sub-events
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').assignSubEvents(
+  'guest-code',
+  ['sub-event-uuid-1', 'sub-event-uuid-2'],
+  { 'sub-event-uuid-1': { shirt_size: 'M' } },
+)
+```
+
+The assignment is one transaction (AIRLST-5445): a full sub-event yields a `waitlisted`
+participation instead of `invited`, and any error rolls back the whole batch. The response
+reports the created participations with their per-sub-event `status`. Requires the company's
+`sub-events` module; a sub-event of another event, or one the guest already participates in,
+responds 422.
+
+The optional third argument (AIRLST-5446) carries participation extended-field values, keyed
+by sub-event UUID. Only sub-events listed in the assignment are accepted, and each value
+object is validated against that sub-event's own field definitions — unknown keys respond 422.
+
+The optional fourth argument `waitlistAllSubeventsOnLimit` (AIRLST-5578, default `false`) turns
+the per-sub-event decision into an all-or-nothing one: when **any** requested sub-event has no
+free seat for this guest, **every** participation of the call is created as `waitlisted` instead
+of only the exhausted one. The trigger is the quota verdict, whichever applicable row produced
+it — the guest's group row, a guest-manager row, or the default row. A waitlisted participation
+occupies no seat, so the free sub-events keep theirs and the guest can be promoted one
+participation at a time later. Pass `undefined` for the extended fields to use it on its own.
+
+The response also carries `overlap_warnings` (AIRLST-5446): groups of the guest's sub-events
+that overlap in time, limited to groups the just-created participations touch. It is a warning
+only — the API never blocks an assignment because of an overlap.
+
+The assignment also derives the guest's status on the parent event, silently — an assignment
+never sends a status email (AIRLST-5447). That derived status is subject to the parent event's
+guest limit, so a call that used to answer 201 can now answer 422 on `limits`, in which case
+nothing is written. The response does not report the derived status: a fresh assignment derives
+`invited`, which tells the caller nothing new. Read the parent status from
+`updateSubEventParticipation()` once the guest answers.
+
+#### List sub-events in the context of one guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const subEvents = await new Guest('event-uuid').listSubEvents('guest-code')
+```
+
+The registration-form read (AIRLST-5447, R40): every sub-event of the event, sorted by start
+date, with the guest's own `participation` (`null` while the guest is not assigned) and a
+guest-specific `has_free_seat`. Quota rows are scoped to guest groups and guest managers, so
+whether a sub-event is "full" depends on the guest — `has_free_seat: false` means a confirm or
+a new assignment for THIS guest would be waitlisted, and the form should say so before the
+guest answers.
+
+#### Accept or decline one participation as the guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').updateSubEventParticipation(
+  'guest-code',
+  'participation-uuid',
+  'confirmed',
+)
+
+data.participation.status // 'confirmed'
+data.guest.status // the guest's status on the PARENT event, after the answer
+```
+
+The guest RSVP (AIRLST-5447): a guest only ever answers `confirmed` or `declined`. A confirm
+from the waitlist re-checks every applicable quota row under locks and responds 422 while no
+seat is actually free — the guest stays waitlisted. While the guest is cancelled on the parent
+event, a confirm responds 422 (reactivate the guest on the parent event first); a decline is
+always allowed. A participation of another guest responds 404.
+
+The answer also derives the guest's status on the parent event, in the same transaction, and
+reports it as `data.guest.status`: one confirmed participation makes the guest `confirmed`;
+while any participation is still `invited` or `waitlisted` the guest is `invited`; once every
+participation is `declined` or `cancelled` the guest is `cancelled`. A guest held at `listed`
+or `requested` is not moved to `invited`, and a guest in the payment-owned `unpaid` or
+`checkout` states is not moved at all — so read the field rather than assuming one of the
+three derived values. When the parent event's guest limit no longer fits the derived status
+the whole call responds 422 and nothing is written. The assign endpoints do not return this
+field: at assign time the derived value carries no information.
+
+The optional fourth argument `sendAutomatedEmail` (default true) gates the per-SubEvent status
+email together with the sub-event's own `send_status_emails` switch.
 
 #### Create a new guest
 
@@ -284,6 +413,82 @@ const { data } = await new GuestManager('event-uuid').checkin('guest-manager-cod
 // And all other methods: createCompanion, archive, restore, delete, createRecommendation, getAttachments, getAttachmentSignedUrl
 ```
 
+#### List the sub-events a guest manager can book
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const subEvents = await new GuestManager('event-uuid').listSubEvents('guest-manager-uuid')
+```
+
+The contingent view of the guest-manager portal (AIRLST-5446/AIRLST-5534). Guest managers exist
+only on the parent event, so the manager is named by its UUID and a manager of another event
+answers 404.
+
+A manager **reaches** a sub-event when BOTH hold: it is released, AND it carries an applicable
+quota row — a row for this manager, or a row for the manager's own guest group. The **default**
+row grants nothing: it is the fallback that catches everyone, so a released sub-event carrying
+only a default row does not appear. An **exhausted** row still grants access — a full contingent
+waitlists a booking, it does not hide the sub-event. Unreachable sub-events are absent; use
+`SubEvent.list()` for the full integrator view.
+
+Each entry reports `booked` — the occupying participations (`invited` and `confirmed`) of this
+manager's guests — plus `limit` and `remaining` from the manager's own quota row. `limit` and
+`remaining` are `null` when the manager has no row of its own: the manager dimension is then
+unlimited, and the manager reached the sub-event through its guest group.
+
+`guest_group_limit`, `guest_group_used` and `guest_group_remaining` report the row of the
+manager's **own guest group** — the other contingent it books against. All three are `null` when
+the manager has no guest group, or when its group owns no row on this sub-event (the manager then
+books against the default row, whose numbers are not its business). `guest_group_used` counts
+every guest of that group, not only the ones this manager brought.
+
+Neither `remaining` nor `guest_group_remaining` goes below 0. Quota rows themselves — of guest
+groups, of the default dimension and of other managers — are never exposed here. Requires the
+company's `sub-events` module.
+
+#### Book a guest onto sub-events as a guest manager
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const { data } = await new GuestManager('event-uuid').assignGuestSubEvents(
+  'guest-manager-uuid',
+  'guest-code',
+  ['sub-event-uuid-1', 'sub-event-uuid-2'],
+  { 'sub-event-uuid-1': { shirt_size: 'M' } },
+)
+```
+
+Same transaction, quota locks, waitlisting and response body as `Guest.assignSubEvents()`, plus
+the two guest-manager restrictions (AIRLST-5446). The guest must be assigned to that manager —
+a guest of another manager responds **403**, and that check runs before validation, so nothing
+about the posted sub-events is disclosed. Every sub-event must be released — an unreleased one
+responds **422** on the offending `sub_event_ids.{index}` key and the whole batch is refused.
+An exhausted quota yields a `waitlisted` participation; it is never a hard rejection.
+
+The optional fifth argument `waitlistAllSubeventsOnLimit` (AIRLST-5578, default `false`) behaves
+exactly as on `Guest.assignSubEvents()`. `assignGuestsSubEvents()` takes it too, as its own fifth
+argument, and the API evaluates it **per guest**: a guest whose batch meets an exhausted quota is
+waitlisted on all of its sub-events, while the rest of the call still books normally.
+
+#### Promote a waitlisted participation as a guest manager
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const { data } = await new GuestManager('event-uuid').promoteSubEventParticipation(
+  'guest-manager-uuid',
+  'participation-uuid',
+  'confirmed',
+)
+```
+
+Manual promotion is the guest manager's step (AIRLST-5446); automatic/FIFO promotion is a later
+milestone. The participation must be `waitlisted`, its sub-event released, and its guest assigned
+to that manager. Every applicable quota row is re-checked under locks, so the promotion responds
+**422** while no seat is actually free.
+
 ### GuestGroup methods
 
 #### List all guest groups
@@ -306,6 +511,11 @@ import { EmailTemplate } from '@airlst/sdk'
 
 const { data } = await new EmailTemplate('event-uuid').list()
 ```
+
+Each template reports its send trigger: `booking_status_hook` (a parent booking status), or —
+mutually exclusive with it — the per-SubEvent pair `sub_event_id` + `sub_event_status_hook`
+(AIRLST-5447). A per-SubEvent template sends on a real participation status transition into
+the hooked status, and only while the sub-event's `send_status_emails` switch is on.
 
 #### Send email template to selected guests
 
