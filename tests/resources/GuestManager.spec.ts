@@ -299,6 +299,29 @@ test('assignGuestSubEvents() with participation extended fields', async () => {
   )
 })
 
+test('assignGuestSubEvents() sends the all-or-nothing waitlist flag', async () => {
+  // AIRLST-5578, inherited from the admin request class the manager one extends.
+  guestManager.assignGuestSubEvents(
+    'guest-manager-uuid',
+    'guest-code',
+    ['sub-event-uuid-1', 'sub-event-uuid-2'],
+    undefined,
+    true,
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        sub_event_ids: ['sub-event-uuid-1', 'sub-event-uuid-2'],
+        waitlist_all_subevents_on_limit: true,
+      }),
+    },
+  )
+})
+
 test('assignGuestsSubEvents()', async () => {
   guestManager.assignGuestsSubEvents(
     'guest-manager-uuid',
@@ -336,6 +359,30 @@ test('assignGuestsSubEvents() with participation extended fields', async () => {
         guests: ['guest-code-1'],
         sub_event_ids: ['sub-event-uuid-1'],
         extended_fields: { 'sub-event-uuid-1': { shirt_size: 'M' } },
+      }),
+    },
+  )
+})
+
+test('assignGuestsSubEvents() sends the all-or-nothing waitlist flag', async () => {
+  // AIRLST-5578, evaluated per guest by the API: one guest never waitlists another.
+  guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1', 'guest-code-2'],
+    ['sub-event-uuid-1', 'sub-event-uuid-2'],
+    undefined,
+    true,
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        guests: ['guest-code-1', 'guest-code-2'],
+        sub_event_ids: ['sub-event-uuid-1', 'sub-event-uuid-2'],
+        waitlist_all_subevents_on_limit: true,
       }),
     },
   )

@@ -159,6 +159,14 @@ The optional third argument (AIRLST-5446) carries participation extended-field v
 by sub-event UUID. Only sub-events listed in the assignment are accepted, and each value
 object is validated against that sub-event's own field definitions — unknown keys respond 422.
 
+The optional fourth argument `waitlistAllSubeventsOnLimit` (AIRLST-5578, default `false`) turns
+the per-sub-event decision into an all-or-nothing one: when **any** requested sub-event has no
+free seat for this guest, **every** participation of the call is created as `waitlisted` instead
+of only the exhausted one. The trigger is the quota verdict, whichever applicable row produced
+it — the guest's group row, a guest-manager row, or the default row. A waitlisted participation
+occupies no seat, so the free sub-events keep theirs and the guest can be promoted one
+participation at a time later. Pass `undefined` for the extended fields to use it on its own.
+
 The response also carries `overlap_warnings` (AIRLST-5446): groups of the guest's sub-events
 that overlap in time, limited to groups the just-created participations touch. It is a warning
 only — the API never blocks an assignment because of an overlap.
@@ -458,6 +466,11 @@ a guest of another manager responds **403**, and that check runs before validati
 about the posted sub-events is disclosed. Every sub-event must be released — an unreleased one
 responds **422** on the offending `sub_event_ids.{index}` key and the whole batch is refused.
 An exhausted quota yields a `waitlisted` participation; it is never a hard rejection.
+
+The optional fifth argument `waitlistAllSubeventsOnLimit` (AIRLST-5578, default `false`) behaves
+exactly as on `Guest.assignSubEvents()`. `assignGuestsSubEvents()` takes it too, as its own fifth
+argument, and the API evaluates it **per guest**: a guest whose batch meets an exhausted quota is
+waitlisted on all of its sub-events, while the rest of the call still books normally.
 
 #### Promote a waitlisted participation as a guest manager
 

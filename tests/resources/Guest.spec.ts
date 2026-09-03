@@ -127,6 +127,45 @@ test('assignSubEvents() sends participation extended-field values', async () => 
   )
 })
 
+test('assignSubEvents() sends the all-or-nothing waitlist flag', async () => {
+  // AIRLST-5578: one full sub-event waitlists every participation of the call.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [
+        { id: 'p1', sub_event_id: 'se1', status: 'waitlisted' },
+        { id: 'p2', sub_event_id: 'se2', status: 'waitlisted' },
+      ],
+      overlap_warnings: [],
+    },
+  })
+
+  await guest.assignSubEvents('guest-code', ['se1', 'se2'], undefined, true)
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: '{"sub_event_ids":["se1","se2"],"waitlist_all_subevents_on_limit":true}',
+    },
+  )
+})
+
+test('assignSubEvents() omits the waitlist flag when it is not given', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { participations: [], overlap_warnings: [] },
+  })
+
+  await guest.assignSubEvents('guest-code', ['se1'])
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: '{"sub_event_ids":["se1"]}',
+    },
+  )
+})
+
 test('get() exposes the sub-event participations', async () => {
   // Present only while the company's `sub-events` module is active (AIRLST-5445);
   // the key is absent otherwise. Assigning guests happens through assignSubEvents().
@@ -518,6 +557,27 @@ test('processImport()', async () => {
     action: Guest.ImportAction.CREATE,
     defaults: { 'guest:status': 'confirmed' },
     marketing_opt_in_setting: Guest.MarketingOptInSetting.NOT_PRESENT,
+  }
+
+  guest.processImport(body)
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/guests/import', {
+    method: 'post',
+    body: JSON.stringify(body),
+  })
+})
+
+test('processImport() carries the SubEvent all-or-nothing waitlist flag', async () => {
+  // AIRLST-5578: a per-import switch, so it rides in the body of this one request.
+  const body = {
+    file: 'tmp/mock-key',
+    first_row_as_header: true,
+    mapped_fields: ['contact:email', 'subEvent:sub_events'],
+    action: Guest.ImportAction.CREATE,
+    defaults: { 'guest:status': 'confirmed' },
+    marketing_opt_in_setting: Guest.MarketingOptInSetting.NOT_PRESENT,
+    waitlist_all_subevents_on_limit: true,
   }
 
   guest.processImport(body)

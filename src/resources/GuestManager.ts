@@ -159,12 +159,17 @@ export const GuestManager = class {
    * be released (422 on the offending `sub_event_ids.{index}` key, and the whole
    * batch is refused). An exhausted quota waitlists the participation; it is never
    * a hard rejection.
+   *
+   * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) behaves exactly as on
+   * `Guest.assignSubEvents()`: when ANY requested sub-event has no free seat for this
+   * guest, EVERY participation of the call is created as `waitlisted`.
    */
   public async assignGuestSubEvents(
     guestManagerId: string,
     code: string,
     subEventIds: Array<string>,
     extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
+    waitlistAllSubeventsOnLimit?: boolean,
   ): Promise<AssignSubEventsResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guest-managers/${guestManagerId}/guests/${code}/sub-events`,
@@ -174,6 +179,9 @@ export const GuestManager = class {
           sub_event_ids: subEventIds,
           ...(extendedFields !== undefined && {
             extended_fields: extendedFields,
+          }),
+          ...(waitlistAllSubeventsOnLimit !== undefined && {
+            waitlist_all_subevents_on_limit: waitlistAllSubeventsOnLimit,
           }),
         }),
       },
@@ -195,12 +203,17 @@ export const GuestManager = class {
    * Bulk assignment exists on the guest-manager surface only — an integrator key uses
    * `Guest.assignSubEvents()` one guest at a time, because a bulk route outside this
    * surface would skip the manager-ownership and released-sub-event rules.
+   *
+   * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) is evaluated PER GUEST,
+   * inside that guest's own transaction: a guest whose batch meets an exhausted quota is
+   * waitlisted on all of its sub-events, while the rest of the call still books normally.
    */
   public async assignGuestsSubEvents(
     guestManagerId: string,
     codes: Array<string>,
     subEventIds: Array<string>,
     extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
+    waitlistAllSubeventsOnLimit?: boolean,
   ): Promise<BulkAssignSubEventsResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guest-managers/${guestManagerId}/sub-events/assignments`,
@@ -211,6 +224,9 @@ export const GuestManager = class {
           sub_event_ids: subEventIds,
           ...(extendedFields !== undefined && {
             extended_fields: extendedFields,
+          }),
+          ...(waitlistAllSubeventsOnLimit !== undefined && {
+            waitlist_all_subevents_on_limit: waitlistAllSubeventsOnLimit,
           }),
         }),
       },

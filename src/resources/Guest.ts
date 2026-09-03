@@ -142,11 +142,20 @@ export const Guest = class {
    * the derived status: a fresh assignment derives `invited`, which says nothing
    * the caller does not already know. Read it from `updateSubEventParticipation()`
    * once the guest answers.
+   *
+   * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) turns the per-sub-event
+   * decision into an all-or-nothing one: when ANY requested sub-event has no free seat
+   * for this guest, EVERY participation of the call is created as `waitlisted` instead
+   * of only the exhausted one. The trigger is the quota verdict, whichever applicable
+   * row produced it — the guest's group row, a guest-manager row, or the default row. A
+   * waitlisted participation occupies no seat, so the free sub-events keep theirs and
+   * the guest can be promoted one participation at a time later.
    */
   public async assignSubEvents(
     code: string,
     subEventIds: Array<string>,
     extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
+    waitlistAllSubeventsOnLimit?: boolean,
   ): Promise<AssignSubEventsResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guests/${code}/sub-events`,
@@ -156,6 +165,9 @@ export const Guest = class {
           sub_event_ids: subEventIds,
           ...(extendedFields !== undefined && {
             extended_fields: extendedFields,
+          }),
+          ...(waitlistAllSubeventsOnLimit !== undefined && {
+            waitlist_all_subevents_on_limit: waitlistAllSubeventsOnLimit,
           }),
         }),
       },
@@ -540,4 +552,11 @@ export interface ProcessGuestImportBodyInterface {
   defaults: GuestImportDefaultsInterface
   required_fields?: Array<string>
   marketing_opt_in_setting: 'present' | 'not_present' | 'individual'
+  // AIRLST-5578, "create" imports only. When true and any SubEvent a row names has no
+  // free seat for that guest, EVERY SubEvent of that row is assigned as `waitlisted`
+  // instead of only the exhausted one. It governs the membership columns only: a
+  // per-SubEvent column naming an explicit status still wins. It does NOT make the
+  // import transactional — valid rows are still imported while invalid rows are
+  // reported. Defaults to false.
+  waitlist_all_subevents_on_limit?: boolean
 }
