@@ -9,6 +9,7 @@ import {
   GuestSubEventInterface,
   SubEventParticipationInterface,
   SubEventOverlapWarningInterface,
+  SubEventPromotionWarningInterface,
   BookingStatus,
 } from '../interfaces'
 import { Event } from './Event'
@@ -233,6 +234,34 @@ export const Guest = class {
     )
   }
 
+  /**
+   * Promotes a waitlisted participation of the guest once a seat frees up (AIRLST-5407,
+   * ACP-30143): `invited` or `confirmed`. Every applicable quota row is re-checked under
+   * locks, so the promotion responds 422 while no seat is actually free; only a
+   * `waitlisted` participation can be promoted, and a participation of another guest
+   * responds 404. The write also derives the guest's status on the PARENT event, silently,
+   * and reports it as `data.guest.status` — the same rules as
+   * `updateSubEventParticipation()`.
+   *
+   * `data.warnings` (AIRLST-5448) is empty when the guest was first in the FIFO queue of
+   * their contingent; otherwise one `queue_skipped` entry says how many guests waited
+   * longer — a warning only, the promotion is never blocked. The promoted row has left the
+   * waitlist, so its `waitlist_cause` and `queue_position` read null.
+   */
+  public async promoteSubEventParticipation(
+    code: string,
+    participationId: string,
+    status: 'invited' | 'confirmed',
+  ): Promise<PromoteSubEventParticipationResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/sub-events/participations/${participationId}/promote`,
+      {
+        method: 'post',
+        body: JSON.stringify({ status }),
+      },
+    )
+  }
+
   public async update(
     code: string,
     body: UpdateBodyInterface,
@@ -430,6 +459,24 @@ interface UpdateSubEventParticipationResponseInterface {
     guest: {
       status: BookingStatus
     }
+  }
+}
+
+interface PromoteSubEventParticipationResponseInterface {
+  data: {
+    participation: SubEventParticipationInterface
+    /**
+     * The guest's status on the parent event after the promotion (derived silently, like
+     * the RSVP answer).
+     */
+    guest: {
+      status: BookingStatus
+    }
+    /**
+     * Empty when the guest was first in their queue; one `queue_skipped` entry otherwise
+     * (AIRLST-5448).
+     */
+    warnings: Array<SubEventPromotionWarningInterface>
   }
 }
 

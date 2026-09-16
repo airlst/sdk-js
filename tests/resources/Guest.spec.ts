@@ -376,6 +376,113 @@ test('updateSubEventParticipation() sends the automated-email opt-out', async ()
   )
 })
 
+test('promoteSubEventParticipation()', async () => {
+  // The key-authed guest promote (AIRLST-5407, ACP-30143): invited or confirmed, every
+  // applicable quota row re-checked under locks, and the derived parent status rides along.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: {
+        id: 'p1',
+        sub_event_id: 'se1',
+        status: 'confirmed',
+        waitlist_cause: null,
+        waitlist_cause_quota_id: null,
+        queue_position: null,
+      },
+      guest: { status: 'confirmed' },
+      warnings: [],
+    },
+  })
+
+  const response = await guest.promoteSubEventParticipation(
+    'guest-code',
+    'p1',
+    'confirmed',
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events/participations/p1/promote',
+    { method: 'post', body: '{"status":"confirmed"}' },
+  )
+  expect(response.data.participation.status).toBe('confirmed')
+  // The promoted row left the waitlist, so its cause and position are gone.
+  expect(response.data.participation.waitlist_cause).toBeNull()
+  expect(response.data.participation.queue_position).toBeNull()
+  expect(response.data.guest.status).toBe('confirmed')
+  expect(response.data.warnings).toEqual([])
+})
+
+test('promoteSubEventParticipation() reports a skipped queue as a warning', async () => {
+  // AIRLST-5448: promoting past guests who waited longer is allowed; the response says how
+  // many were skipped. A warning, never a block.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: {
+        id: 'p1',
+        sub_event_id: 'se1',
+        status: 'invited',
+        waitlist_cause: null,
+        waitlist_cause_quota_id: null,
+        queue_position: null,
+      },
+      guest: { status: 'invited' },
+      warnings: [
+        {
+          code: 'queue_skipped',
+          guests_waited_longer: 2,
+          message: '2 guests waited longer for this contingent.',
+        },
+      ],
+    },
+  })
+
+  const response = await guest.promoteSubEventParticipation(
+    'guest-code',
+    'p1',
+    'invited',
+  )
+
+  expect(response.data.warnings[0].code).toBe('queue_skipped')
+  expect(response.data.warnings[0].guests_waited_longer).toBe(2)
+})
+
+test('assignSubEvents() reports the waitlist cause and the queue position', async () => {
+  // R23 (AIRLST-5448): a waitlisted row names the quota row that refused the seat and the
+  // guest's place in that queue; an invited row carries nulls.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [
+        {
+          id: 'p1',
+          sub_event_id: 'se1',
+          status: 'waitlisted',
+          waitlist_cause: 'default',
+          waitlist_cause_quota_id: 'q1',
+          queue_position: 3,
+        },
+        {
+          id: 'p2',
+          sub_event_id: 'se2',
+          status: 'invited',
+          waitlist_cause: null,
+          waitlist_cause_quota_id: null,
+          queue_position: null,
+        },
+      ],
+      overlap_warnings: [],
+    },
+  })
+
+  const { data } = await guest.assignSubEvents('guest-code', ['se1', 'se2'])
+
+  expect(data.participations[0].waitlist_cause).toBe('default')
+  expect(data.participations[0].waitlist_cause_quota_id).toBe('q1')
+  expect(data.participations[0].queue_position).toBe(3)
+  expect(data.participations[1].waitlist_cause).toBeNull()
+  expect(data.participations[1].queue_position).toBeNull()
+})
+
 test('update()', async () => {
   guest.update('guest-code', { a: 'b' })
 

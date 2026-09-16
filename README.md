@@ -137,6 +137,16 @@ When the company's `sub-events` module is active, the guest object also carries
 per-sub-event `status` (`invited`, `confirmed`, `declined`, `cancelled` or `waitlisted`).
 The key is absent while the module is off.
 
+Every participation object — here and on every sub-event endpoint below — also reports why it
+is waitlisted (AIRLST-5448). `waitlist_cause` is `guest_group`, `guest_manager` or `default`
+when that quota row refused the seat (`waitlist_cause_quota_id` names the row),
+`all_or_nothing` when another sub-event of the same batch was full, `manual` when an operator
+waitlisted the guest explicitly, and `null` on a row that is not waitlisted — or on one
+waitlisted before the cause was recorded, which reads as "unknown". `queue_position` is the
+guest's 1-based place in the FIFO queue of that contingent (ordered by `created_at`, then
+`id`; one queue per quota row, the `all_or_nothing` rows of a sub-event among themselves) and
+`null` when the row has no queue.
+
 #### Assign a guest to sub-events
 
 ```javascript
@@ -226,6 +236,35 @@ field: at assign time the derived value carries no information.
 
 The optional fourth argument `sendAutomatedEmail` (default true) gates the per-SubEvent status
 email together with the sub-event's own `send_status_emails` switch.
+
+#### Promote a waitlisted participation as the guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').promoteSubEventParticipation(
+  'guest-code',
+  'participation-uuid',
+  'confirmed',
+)
+
+data.participation.status // 'confirmed'
+data.guest.status // the guest's status on the PARENT event, after the promotion
+data.warnings // [] when the guest was first in line
+```
+
+The key-authed guest promote (AIRLST-5407, ACP-30143) — the "book seat" action of a portal that
+authenticates with the event API key. Only a `waitlisted` participation can be promoted, into
+`invited` or `confirmed`. Every applicable quota row is re-checked under locks, so the call
+responds **422** while no seat is actually free; a participation of another guest responds
+**404**. The write derives the guest's status on the parent event silently, with the same rules
+as `updateSubEventParticipation()`, and reports it as `data.guest.status`.
+
+`data.warnings` (AIRLST-5448) is empty when the guest was first in the FIFO queue of their
+contingent. Otherwise it carries one entry `{ code: 'queue_skipped', guests_waited_longer,
+message }` — how many guests of the same contingent had waited longer, with a translated
+message. A warning only: the promotion is never blocked by the queue. The promoted row has left
+the waitlist, so its `waitlist_cause` and `queue_position` read `null`.
 
 #### Create a new guest
 
@@ -447,6 +486,10 @@ Neither `remaining` nor `guest_group_remaining` goes below 0. Quota rows themsel
 groups, of the default dimension and of other managers — are never exposed here. Requires the
 company's `sub-events` module.
 
+`waitlisted` and `guest_group_waitlisted` (AIRLST-5448) count the guests queued on the manager's
+own row and on its group row — the queues a raised limit would drain, in FIFO order. They are
+`null` exactly when `limit` and `guest_group_limit` are `null`.
+
 #### Book a guest onto sub-events as a guest manager
 
 ```javascript
@@ -484,10 +527,16 @@ const { data } = await new GuestManager('event-uuid').promoteSubEventParticipati
 )
 ```
 
-Manual promotion is the guest manager's step (AIRLST-5446); automatic/FIFO promotion is a later
+Manual promotion is the guest manager's step (AIRLST-5446); automatic FIFO promotion is a later
 milestone. The participation must be `waitlisted`, its sub-event released, and its guest assigned
 to that manager. Every applicable quota row is re-checked under locks, so the promotion responds
 **422** while no seat is actually free.
+
+`data.warnings` (AIRLST-5448) is empty when the guest was first in the FIFO queue of their
+contingent. Otherwise it carries one entry `{ code: 'queue_skipped', guests_waited_longer,
+message }` — how many guests of the same contingent had waited longer, with a translated
+message. A warning only: the promotion is never blocked by the queue. The promoted row has left
+the waitlist, so its `waitlist_cause` and `queue_position` read `null`.
 
 ### GuestGroup methods
 

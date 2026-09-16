@@ -169,9 +169,11 @@ test('listSubEvents()', async () => {
           booked: 7,
           limit: 20,
           remaining: 13,
+          waitlisted: 3,
           guest_group_limit: 40,
           guest_group_used: 31,
           guest_group_remaining: 9,
+          guest_group_waitlisted: 5,
         },
       ],
     },
@@ -187,11 +189,14 @@ test('listSubEvents()', async () => {
   expect(subEvents[0].booked).toBe(7)
   expect(subEvents[0].limit).toBe(20)
   expect(subEvents[0].remaining).toBe(13)
+  // The queue a raised limit would drain, in FIFO order (AIRLST-5448).
+  expect(subEvents[0].waitlisted).toBe(3)
   // The other contingent the manager books against: the row of its own guest group
   // (AIRLST-5534). Counted across the whole group, not only this manager's guests.
   expect(subEvents[0].guest_group_limit).toBe(40)
   expect(subEvents[0].guest_group_used).toBe(31)
   expect(subEvents[0].guest_group_remaining).toBe(9)
+  expect(subEvents[0].guest_group_waitlisted).toBe(5)
 })
 
 test('listSubEvents() reports an unlimited manager dimension', async () => {
@@ -468,4 +473,39 @@ test('promoteSubEventParticipation()', async () => {
       body: JSON.stringify({ status: 'confirmed' }),
     },
   )
+})
+
+test('promoteSubEventParticipation() reports a skipped queue as a warning', async () => {
+  // AIRLST-5448: the manager may promote past guests who waited longer; the response says
+  // how many. A warning, never a block — and the promoted row leaves the waitlist.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: {
+        id: 'participation-uuid',
+        sub_event_id: 'sub-event-uuid',
+        status: 'confirmed',
+        waitlist_cause: null,
+        waitlist_cause_quota_id: null,
+        queue_position: null,
+      },
+      warnings: [
+        {
+          code: 'queue_skipped',
+          guests_waited_longer: 1,
+          message: 'One guest waited longer for this contingent.',
+        },
+      ],
+    },
+  })
+
+  const response = await guestManager.promoteSubEventParticipation(
+    'guest-manager-uuid',
+    'participation-uuid',
+    'confirmed',
+  )
+
+  expect(response.data.participation.waitlist_cause).toBeNull()
+  expect(response.data.warnings).toHaveLength(1)
+  expect(response.data.warnings[0].code).toBe('queue_skipped')
+  expect(response.data.warnings[0].guests_waited_longer).toBe(1)
 })

@@ -107,6 +107,11 @@ export interface GuestManagerSubEventContingentInterface {
    */
   remaining: number | null
   /**
+   * Guests queued on the manager's own quota row, in FIFO order (AIRLST-5448) — the queue a
+   * raised limit would drain. Null exactly when `limit` is null.
+   */
+  waitlisted: number | null
+  /**
    * The limit of the row belonging to the manager's OWN guest group (AIRLST-5534).
    *
    * Null when the manager has no guest group, or when its group owns no row on this
@@ -125,6 +130,11 @@ export interface GuestManagerSubEventContingentInterface {
    * `guest_group_limit` is null.
    */
   guest_group_remaining: number | null
+  /**
+   * Guests queued on the row of the manager's own guest group (AIRLST-5448). Null exactly
+   * when `guest_group_limit` is null.
+   */
+  guest_group_waitlisted: number | null
 }
 
 export interface SubEventQuotaInterface {
@@ -176,10 +186,53 @@ export interface GuestGroupInterface {
   }
 }
 
+/**
+ * Why a participation is waitlisted (AIRLST-5448, R23), recorded when the row is waitlisted
+ * because it is not derivable later. `guest_group`, `guest_manager` and `default`: that quota
+ * row refused the seat, and `waitlist_cause_quota_id` names it. `all_or_nothing`: the guest's
+ * own quota had room, but another sub-event of the same batch was full
+ * (`waitlistAllSubeventsOnLimit`). `manual`: an operator waitlisted the guest explicitly.
+ */
+export type SubEventWaitlistCause =
+  | 'guest_group'
+  | 'guest_manager'
+  | 'default'
+  | 'all_or_nothing'
+  | 'manual'
+
 export interface SubEventParticipationInterface {
   id: string
   sub_event_id: string
   status: 'invited' | 'confirmed' | 'declined' | 'cancelled' | 'waitlisted'
+  /**
+   * Null on a row that is not waitlisted — and on a row waitlisted before the cause was
+   * recorded, which reads as "unknown" (AIRLST-5448).
+   */
+  waitlist_cause: SubEventWaitlistCause | null
+  /**
+   * The quota row that refused the seat. Null for the row-less kinds (`all_or_nothing`,
+   * `manual`), for an unknown cause, and once that quota row was deleted.
+   */
+  waitlist_cause_quota_id: string | null
+  /**
+   * The 1-based position in the FIFO queue of the causing contingent — one queue per quota
+   * row, ordered by `created_at` then `id`; the `all_or_nothing` rows of a sub-event queue
+   * among themselves. Null when the row has no queue: not waitlisted, `manual`, unknown, or
+   * its quota row is gone.
+   */
+  queue_position: number | null
+}
+
+/**
+ * A warning of a manual promotion (AIRLST-5448): the promoted guest was not first in the FIFO
+ * queue of their contingent. A warning only — the promotion is never blocked by the queue.
+ */
+export interface SubEventPromotionWarningInterface {
+  code: 'queue_skipped'
+  /** How many guests of the same contingent had waited longer than the promoted one. */
+  guests_waited_longer: number
+  /** Translated, ready to display. */
+  message: string
 }
 
 /**

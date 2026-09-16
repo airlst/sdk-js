@@ -5,6 +5,7 @@ import {
   GuestManagerSubEventContingentInterface,
   SubEventOverlapWarningInterface,
   SubEventParticipationInterface,
+  SubEventPromotionWarningInterface,
 } from '../interfaces'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
 import {
@@ -236,10 +237,15 @@ export const GuestManager = class {
   /**
    * Promotes a waitlisted participation once a seat frees up (AIRLST-5446).
    *
-   * Manual promotion is the guest manager's step in M2. The participation must be
+   * Manual promotion is the guest manager's step. The participation must be
    * `waitlisted`, its sub-event released, and its guest assigned to
    * `guestManagerId`. Every applicable quota row is re-checked under locks, so the
    * promotion is refused with 422 while no seat is actually free.
+   *
+   * `data.warnings` (AIRLST-5448) is empty when the guest was first in the FIFO queue of
+   * their contingent; otherwise one `queue_skipped` entry says how many guests waited
+   * longer — a warning only, the promotion is never blocked. The promoted row has left the
+   * waitlist, so its `waitlist_cause` and `queue_position` read null.
    */
   public async promoteSubEventParticipation(
     guestManagerId: string,
@@ -329,5 +335,10 @@ export interface BulkAssignSubEventsResponseInterface {
 interface PromoteSubEventParticipationResponseInterface {
   data: {
     participation: SubEventParticipationInterface
+    /**
+     * Empty when the guest was first in their queue; one `queue_skipped` entry otherwise
+     * (AIRLST-5448).
+     */
+    warnings: Array<SubEventPromotionWarningInterface>
   }
 }
