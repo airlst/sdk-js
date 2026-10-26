@@ -76,11 +76,30 @@ the reminder email as a workflow. Every real participation status change also fi
 `subEventParticipationStatusChanged` workflow trigger, so a workflow with an HTTP request action
 works as a webhook.
 
+Each sub-event also reports `image_url` (AIRLST-5842), `null` without an image.
+
 `SubEvent.list()` is the **full integrator view**: it returns released and unreleased
 sub-events alike, and `released_at` is what tells them apart. A guest-manager-facing consumer
 must not read it — use `GuestManager.listSubEvents()` instead, which returns only the sub-events
 the acting manager can reach (released AND covered by a quota row for the manager or its guest
 group) and reports that manager's own contingent.
+
+#### Set or remove the image of a sub-event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvent = await new SubEvent('event-uuid').uploadImage(
+  'sub-event-uuid',
+  file, // a Blob or File: JPEG, PNG or WebP, at most 5 MB
+  'tour.jpg',
+)
+
+await new SubEvent('event-uuid').deleteImage('sub-event-uuid')
+```
+
+A new upload replaces the old image. Both methods return the sub-event in the shape of
+`list()`. A file of another type or above 5 MB responds **422**.
 
 #### Get temporary signed url to upload file directly to cloud storage
 

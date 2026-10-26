@@ -58,6 +58,11 @@ export interface SubEventInterface {
    */
   reminder_sent_at: string | null
   /**
+   * The URL of the sub-event image (AIRLST-5842); null without one. Set it with
+   * `SubEvent.uploadImage()`.
+   */
+  image_url: string | null
+  /**
    * Occupying participations only — statuses `invited` and `confirmed` (AIRLST-5445).
    */
   participations_count: number
@@ -84,6 +89,10 @@ export interface GuestSubEventInterface {
    * (AIRLST-5842). Null means no deadline.
    */
   response_deadline_at: string | null
+  /**
+   * The URL of the sub-event image (AIRLST-5842); null without one.
+   */
+  image_url: string | null
   participation: SubEventParticipationInterface | null
   has_free_seat: boolean
 }
@@ -111,6 +120,10 @@ export interface GuestManagerSubEventContingentInterface {
    * Never null on this surface: the list returns released sub-events only.
    */
   released_at: string
+  /**
+   * The URL of the sub-event image (AIRLST-5842); null without one.
+   */
+  image_url: string | null
   /**
    * Occupying participations — statuses `invited` and `confirmed` — of THIS
    * manager's guests. Always reported, also when the manager has no quota row.

@@ -122,3 +122,39 @@ test('list() exposes the locale-keyed guest group name on a group quota', async 
   expect(galaDinner?.quotas[1]?.guest_group_name?.['en-GB']).toBe('VIP')
   expect(galaDinner?.quotas[1]?.used).toBe(3)
 })
+
+test('uploadImage() posts the file as multipart', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_event: { id: 'sub-event-uuid', image_url: 'https://cdn/tour.jpg' },
+    },
+  })
+  const image = new Blob(['jpg-bytes'], { type: 'image/jpeg' })
+
+  const result = await subEvent.uploadImage('sub-event-uuid', image, 'tour.jpg')
+
+  expect(result.image_url).toBe('https://cdn/tour.jpg')
+  expect(apiMock).toHaveBeenCalledTimes(1)
+
+  const [uri, options] = apiMock.mock.calls[0]
+  expect(uri).toBe('/events/event-uuid/sub-events/sub-event-uuid/image')
+  expect(options.method).toBe('POST')
+  expect(options.body).toBeInstanceOf(FormData)
+  expect((options.body.get('image') as File).name).toBe('tour.jpg')
+  expect(options.headers).not.toHaveProperty('content-type')
+  expect(options.headers).toHaveProperty('x-api-key')
+})
+
+test('deleteImage()', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { sub_event: { id: 'sub-event-uuid', image_url: null } },
+  })
+
+  const result = await subEvent.deleteImage('sub-event-uuid')
+
+  expect(result.image_url).toBeNull()
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid/image',
+    { method: 'DELETE' },
+  )
+})
