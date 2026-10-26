@@ -115,6 +115,7 @@ Method accepts following parameters:
 | `sorts.*.field`      | `string` | Sort field                                                                                                                                                                                                                                   |
 | `sorts.*.direction`  | `string` | Sort field direction. One of: `asc` (ascending), `desc` (descending)                                                                                                                                                                         |
 | `sorts.*.order`      | `number` | Sort field order. Optional. Defines order/priority of the sort when sorting by multiple fields                                                                                                                                               |
+| `includeSubEventParticipations` | `boolean` | Optional. Adds `sub_event_participations` to every guest of the page, in the same shape as `get()` (AIRLST-5842). Only takes effect while the company's `sub-events` module is active; the key is absent otherwise. |
 
 #### Validate guest code
 

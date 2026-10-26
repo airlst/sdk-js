@@ -33,6 +33,24 @@ test('list()', async () => {
   )
 })
 
+test('list() with includeSubEventParticipations', async () => {
+  guest.list({ page: 'p', includeSubEventParticipations: true })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests?page=p&per_page=25&includeSubEventParticipations=true',
+  )
+})
+
+test('list() without includeSubEventParticipations', async () => {
+  guest.list({ page: 'p', includeSubEventParticipations: false })
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests?page=p&per_page=25',
+  )
+})
+
 test('list() with guest_manager_id', async () => {
   guest.list({
     page: 'p',

@@ -17,6 +17,11 @@ import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
 
 interface GuestListQueryParameters extends QueryParameters {
   guest_manager_id?: string
+  /**
+   * Adds `sub_event_participations` to every guest of the page (AIRLST-5842). Only takes
+   * effect while the company's `sub-events` module is active.
+   */
+  includeSubEventParticipations?: boolean
 }
 
 export const Guest = class {
@@ -60,6 +65,10 @@ export const Guest = class {
 
     if (parameters.guest_manager_id) {
       baseQuery['guest_manager_id'] = parameters.guest_manager_id
+    }
+
+    if (parameters.includeSubEventParticipations) {
+      baseQuery['includeSubEventParticipations'] = 'true'
     }
 
     const queryString = new URLSearchParams(baseQuery).toString()

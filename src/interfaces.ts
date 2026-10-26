@@ -268,8 +268,9 @@ export interface GuestInterface {
   recommended_guests?: Array<GuestInterface>
   /**
    * The guest's sub-event participations with their per-sub-event status (AIRLST-5445).
-   * Only on `Guest.get()`, and only while the company's `sub-events` module is active —
-   * the key is absent otherwise, and on the nested guest objects of a response.
+   * Only on `Guest.get()`, and on `Guest.list()` with `includeSubEventParticipations: true`
+   * (AIRLST-5842), and only while the company's `sub-events` module is active — the key is
+   * absent otherwise, and on the nested guest objects of a response.
    */
   sub_event_participations?: Array<SubEventParticipationInterface>
 }
