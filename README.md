@@ -122,6 +122,26 @@ not take `quotas`. Both accept `response_deadline_at` and `reminder_at`; a remin
 deadline responds 422. Both resolve to the sub-event with its quota state, in the shape of
 `list()`. Timestamps take an ISO 8601 offset; the API stores the UTC instant.
 
+#### Write the quota matrix of a sub-event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvent = await new SubEvent('event-uuid').syncQuotas('sub-event-uuid', [
+  { guest_group_id: 'market-a-uuid', limit: 12 },
+  { guest_group_id: 'market-b-uuid', limit: 8 },
+  { guest_manager_id: 'spoc-uuid', limit: 5 },
+  { limit: 0 },
+])
+```
+
+`syncQuotas()` replaces the complete matrix (AIRLST-5842), exactly like the Suite quota modal.
+One sub-event can have rows for several guest groups: each row is the seat share of that market.
+A row has a `guest_group_id`, a `guest_manager_id`, or neither (the default row), never both, and
+the matrix holds at most one row per dimension. Guest groups and guest managers must belong to
+the event. A kept row keeps its `id`; an empty array clears the matrix. It resolves to the
+sub-event with the quota state of every row.
+
 #### Get temporary signed url to upload file directly to cloud storage
 
 ```javascript

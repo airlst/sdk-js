@@ -199,3 +199,54 @@ test('update()', async () => {
   )
   expect(updated.teaser).toBeNull()
 })
+
+test('syncQuotas()', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_event: {
+        id: 'sub-event-uuid',
+        quotas: [
+          {
+            id: 'quota-uuid',
+            guest_group_id: 'market-a-uuid',
+            guest_manager_id: null,
+            guest_manager_name: null,
+            limit: 12,
+            used: 3,
+          },
+        ],
+      },
+    },
+  })
+
+  const quotas = [
+    { guest_group_id: 'market-a-uuid', limit: 12 },
+    { guest_manager_id: 'spoc-uuid', limit: 5 },
+    { limit: 0 },
+  ]
+
+  const synced = await subEvent.syncQuotas('sub-event-uuid', quotas)
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid/quotas',
+    {
+      method: 'put',
+      body: JSON.stringify({ quotas }),
+    },
+  )
+  expect(synced.quotas[0].used).toBe(3)
+})
+
+test('syncQuotas() clears the matrix with an empty array', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { sub_event: { id: 'sub-event-uuid', quotas: [] } },
+  })
+
+  const synced = await subEvent.syncQuotas('sub-event-uuid', [])
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid/quotas',
+    { method: 'put', body: JSON.stringify({ quotas: [] }) },
+  )
+  expect(synced.quotas).toHaveLength(0)
+})

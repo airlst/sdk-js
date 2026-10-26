@@ -2,6 +2,7 @@ import { Api } from '../Api'
 import {
   CreateSubEventBodyInterface,
   SubEventInterface,
+  SubEventQuotaBodyInterface,
   UpdateSubEventBodyInterface,
 } from '../interfaces'
 
@@ -54,6 +55,25 @@ export const SubEvent = class {
       {
         method: 'patch',
         body: JSON.stringify(body),
+      },
+    )
+
+    return data.sub_event
+  }
+
+  /**
+   * Replaces the complete quota matrix of one sub-event (AIRLST-5842). An empty array
+   * clears it. Resolves to the sub-event with the quota state of every row.
+   */
+  public async syncQuotas(
+    subEventId: string,
+    quotas: Array<SubEventQuotaBodyInterface>,
+  ): Promise<SubEventInterface> {
+    const { data } = await Api.sendRequest(
+      `/events/${this.eventId}/sub-events/${subEventId}/quotas`,
+      {
+        method: 'put',
+        body: JSON.stringify({ quotas }),
       },
     )
 
