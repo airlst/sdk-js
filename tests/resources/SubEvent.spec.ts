@@ -123,6 +123,83 @@ test('list() exposes the locale-keyed guest group name on a group quota', async 
   expect(galaDinner?.quotas[1]?.used).toBe(3)
 })
 
+const content = {
+  key: 'deep-dive',
+  category: 'side_event',
+  teaser: 'Teaser',
+  description: '<p>Description</p>',
+  venue: 'Hall 4',
+  contact_name: 'Alex Smith',
+  contact_email: 'alex@example.com',
+  contact_phone: '+49 711 000000',
+  language: 'en-GB',
+  dress_code: 'Business casual',
+}
+
+test('list() filters by key', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { sub_events: [{ id: 'sub-event-uuid', ...content }] },
+  })
+
+  const subEvents = await subEvent.list({ key: 'deep dive&x' })
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events?key=deep+dive%26x',
+  )
+  expect(subEvents[0].key).toBe('deep-dive')
+  expect(subEvents[0].venue).toBe('Hall 4')
+})
+
+test('create()', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_event: { id: 'sub-event-uuid', name: 'Deep Dive', ...content },
+    },
+  })
+
+  const body = {
+    name: 'Deep Dive',
+    starts_at: '2027-05-03T09:00:00+02:00',
+    ends_at: '2027-05-03T11:00:00+02:00',
+    released: true,
+    quotas: [
+      { guest_group_id: 'market-a-uuid', limit: 12 },
+      { guest_manager_id: 'spoc-uuid', limit: 5 },
+      { limit: 0 },
+    ],
+    ...content,
+  }
+
+  const created = await subEvent.create(body)
+
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/sub-events', {
+    method: 'post',
+    body: JSON.stringify(body),
+  })
+  expect(created.id).toBe('sub-event-uuid')
+  expect(created.category).toBe('side_event')
+})
+
+test('update()', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { sub_event: { id: 'sub-event-uuid', ...content, teaser: null } },
+  })
+
+  const updated = await subEvent.update('sub-event-uuid', {
+    teaser: null,
+    released: false,
+  })
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid',
+    {
+      method: 'patch',
+      body: JSON.stringify({ teaser: null, released: false }),
+    },
+  )
+  expect(updated.teaser).toBeNull()
+})
+
 test('uploadImage() posts the file as multipart', async () => {
   apiMock.mockResolvedValueOnce({
     data: {
