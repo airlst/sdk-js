@@ -43,6 +43,21 @@ export interface SubEventInterface {
    */
   send_status_emails: boolean
   /**
+   * After this moment a guest can no longer confirm, promote or self-book on the guest
+   * endpoints (AIRLST-5842); a decline stays possible. Null means no deadline.
+   */
+  response_deadline_at: string | null
+  /**
+   * The moment the `subEventResponseReminderDue` workflow trigger fires once for every
+   * guest whose participation is still `invited` (AIRLST-5842). Never after
+   * `response_deadline_at`.
+   */
+  reminder_at: string | null
+  /**
+   * When the reminder fired; null until then. A new `reminder_at` sets it back to null.
+   */
+  reminder_sent_at: string | null
+  /**
    * Occupying participations only — statuses `invited` and `confirmed` (AIRLST-5445).
    */
   participations_count: number
@@ -64,6 +79,11 @@ export interface GuestSubEventInterface {
   ends_at: string
   registration_mode: 'invitation_only' | 'open'
   released_at: string | null
+  /**
+   * After this moment the guest can no longer confirm; a decline stays possible
+   * (AIRLST-5842). Null means no deadline.
+   */
+  response_deadline_at: string | null
   participation: SubEventParticipationInterface | null
   has_free_seat: boolean
 }

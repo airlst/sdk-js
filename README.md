@@ -68,6 +68,14 @@ guest-manager booking, or `null` while it is unreleased. It is independent of
 participation status transitions send no per-SubEvent email templates. To assign guests, use
 `Guest.assignSubEvents()` (see the Guest methods).
 
+`response_deadline_at` (AIRLST-5842) is the moment after which a guest can no longer confirm,
+promote or self-book; a decline stays possible, and `null` means no deadline. `reminder_at` is
+the moment the `subEventResponseReminderDue` workflow trigger fires once for every guest whose
+participation is still `invited`; `reminder_sent_at` records when it fired. Customers configure
+the reminder email as a workflow. Every real participation status change also fires the
+`subEventParticipationStatusChanged` workflow trigger, so a workflow with an HTTP request action
+works as a webhook.
+
 `SubEvent.list()` is the **full integrator view**: it returns released and unreleased
 sub-events alike, and `released_at` is what tells them apart. A guest-manager-facing consumer
 must not read it — use `GuestManager.listSubEvents()` instead, which returns only the sub-events
@@ -202,7 +210,8 @@ date, with the guest's own `participation` (`null` while the guest is not assign
 guest-specific `has_free_seat`. Quota rows are scoped to guest groups and guest managers, so
 whether a sub-event is "full" depends on the guest — `has_free_seat: false` means a confirm or
 a new assignment for THIS guest would be waitlisted, and the form should say so before the
-guest answers.
+guest answers. Each sub-event also reports `response_deadline_at` (AIRLST-5842): after it the
+guest can no longer confirm, but can still decline.
 
 #### Accept or decline one participation as the guest
 
@@ -222,8 +231,9 @@ data.guest.status // the guest's status on the PARENT event, after the answer
 The guest RSVP (AIRLST-5447): a guest only ever answers `confirmed` or `declined`. A confirm
 from the waitlist re-checks every applicable quota row under locks and responds 422 while no
 seat is actually free — the guest stays waitlisted. While the guest is cancelled on the parent
-event, a confirm responds 422 (reactivate the guest on the parent event first); a decline is
-always allowed. A participation of another guest responds 404.
+event, a confirm responds 422 (reactivate the guest on the parent event first). After the
+sub-event's `response_deadline_at` a confirm responds 422 too (AIRLST-5842). A decline is
+always allowed, also after the deadline. A participation of another guest responds 404.
 
 The answer also derives the guest's status on the parent event, in the same transaction, and
 reports it as `data.guest.status`: one confirmed participation makes the guest `confirmed`;
@@ -257,8 +267,8 @@ data.warnings // [] when the guest was first in line
 The key-authed guest promote (AIRLST-5407, ACP-30143) — the "book seat" action of a portal that
 authenticates with the event API key. Only a `waitlisted` participation can be promoted, into
 `invited` or `confirmed`. Every applicable quota row is re-checked under locks, so the call
-responds **422** while no seat is actually free; a participation of another guest responds
-**404**. The write derives the guest's status on the parent event silently, with the same rules
+responds **422** while no seat is actually free, and also after the sub-event's
+`response_deadline_at` (AIRLST-5842); a participation of another guest responds **404**. The write derives the guest's status on the parent event silently, with the same rules
 as `updateSubEventParticipation()`, and reports it as `data.guest.status`.
 
 `data.warnings` (AIRLST-5448) is empty when the guest was first in the FIFO queue of their

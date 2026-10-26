@@ -207,8 +207,9 @@ export const Guest = class {
    * nothing else. A confirm from the waitlist re-checks every applicable quota row
    * under locks and responds 422 while no seat is actually free — the guest stays
    * waitlisted. While the guest is cancelled on the parent event, a confirm responds
-   * 422 (reactivate the guest on the parent event first); a decline is always allowed.
-   * A participation of another guest responds 404.
+   * 422 (reactivate the guest on the parent event first). After the sub-event's
+   * `response_deadline_at` a confirm responds 422 too (AIRLST-5842). A decline is always
+   * allowed, also after the deadline. A participation of another guest responds 404.
    *
    * `sendAutomatedEmail` (default true) gates the per-SubEvent status email together
    * with the sub-event's own `send_status_emails` switch.
@@ -248,7 +249,8 @@ export const Guest = class {
    * ACP-30143): `invited` or `confirmed`. Every applicable quota row is re-checked under
    * locks, so the promotion responds 422 while no seat is actually free; only a
    * `waitlisted` participation can be promoted, and a participation of another guest
-   * responds 404. The write also derives the guest's status on the PARENT event, silently,
+   * responds 404. After the sub-event's `response_deadline_at` the promotion responds 422
+   * (AIRLST-5842). The write also derives the guest's status on the PARENT event, silently,
    * and reports it as `data.guest.status` — the same rules as
    * `updateSubEventParticipation()`.
    *
