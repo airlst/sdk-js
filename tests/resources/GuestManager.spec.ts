@@ -458,6 +458,22 @@ test('assignGuestSubEvents() returns waitlisted participations and overlap warni
   expect(data.overlap_warnings[0].sub_event_ids).toHaveLength(2)
 })
 
+test('cancelSubEventParticipation()', async () => {
+  guestManager.cancelSubEventParticipation(
+    'guest-manager-uuid',
+    'participation-uuid',
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/participations/participation-uuid',
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'cancelled' }),
+    },
+  )
+})
+
 test('promoteSubEventParticipation()', async () => {
   guestManager.promoteSubEventParticipation(
     'guest-manager-uuid',

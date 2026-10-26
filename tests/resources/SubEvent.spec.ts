@@ -334,3 +334,32 @@ test('create() starts a sub-event in planning', async () => {
   })
   expect(created.invitations_sent_at).toBeNull()
 })
+
+test('updateParticipation() cancels a participation', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: { id: 'participation-uuid', status: 'cancelled' },
+      warnings: [],
+      guest: { status: 'cancelled' },
+    },
+  })
+
+  const { data } = await subEvent.updateParticipation(
+    'sub-event-uuid',
+    'participation-uuid',
+    { status: 'cancelled', send_automated_email: false },
+  )
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid/participations/participation-uuid',
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status: 'cancelled',
+        send_automated_email: false,
+      }),
+    },
+  )
+  expect(data.participation.status).toBe('cancelled')
+  expect(data.guest.status).toBe('cancelled')
+})

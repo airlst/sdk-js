@@ -235,6 +235,24 @@ export const GuestManager = class {
   }
 
   /**
+   * Cancels a participation of one of the manager's own guests (AIRLST-5842). The row stays
+   * as `cancelled` and its seat is freed. A guest of another manager responds 403, a
+   * sub-event out of the manager's reach 422. Silent: no email.
+   */
+  public async cancelSubEventParticipation(
+    guestManagerId: string,
+    participationId: string,
+  ): Promise<CancelSubEventParticipationResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guest-managers/${guestManagerId}/participations/${participationId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'cancelled' }),
+      },
+    )
+  }
+
+  /**
    * Promotes a waitlisted participation once a seat frees up (AIRLST-5446).
    *
    * Manual promotion is the guest manager's step. The participation must be
@@ -333,6 +351,12 @@ export interface BulkAssignSubEventsResultInterface {
 export interface BulkAssignSubEventsResponseInterface {
   data: {
     results: Array<BulkAssignSubEventsResultInterface>
+  }
+}
+
+interface CancelSubEventParticipationResponseInterface {
+  data: {
+    participation: SubEventParticipationInterface
   }
 }
 

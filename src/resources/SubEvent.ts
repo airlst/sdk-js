@@ -5,6 +5,8 @@ import {
   SubEventInterface,
   SubEventQuotaBodyInterface,
   UpdateSubEventBodyInterface,
+  UpdateSubEventParticipationAsIntegratorResponseInterface,
+  UpdateSubEventParticipationBodyInterface,
 } from '../interfaces'
 
 export const SubEvent = class {
@@ -153,5 +155,25 @@ export const SubEvent = class {
     )
 
     return data
+  }
+
+  /**
+   * Writes one participation as the integrator (AIRLST-5842), mainly to cancel it:
+   * `{ status: 'cancelled' }` keeps the row as `cancelled` and frees its seat, so the guest
+   * can be re-added later. A move into a seat re-checks the quota and responds 422 while no
+   * seat is free; the planning rules apply. The parent status derives silently.
+   */
+  public async updateParticipation(
+    subEventId: string,
+    participationId: string,
+    body: UpdateSubEventParticipationBodyInterface,
+  ): Promise<UpdateSubEventParticipationAsIntegratorResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/sub-events/${subEventId}/participations/${participationId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      },
+    )
   }
 }

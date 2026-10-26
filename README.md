@@ -192,6 +192,27 @@ second argument to send no email; by default each row sends the email template h
 `invited` when the sub-event's `send_status_emails` is on. A second call is safe and reports
 `planned_count: 0`. After it, new assignments are `invited` as usual.
 
+#### Cancel or update a participation as the integrator
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const { data } = await new SubEvent('event-uuid').updateParticipation(
+  'sub-event-uuid',
+  'participation-uuid',
+  { status: 'cancelled' },
+)
+
+data.participation.status // 'cancelled'
+data.guest.status // the guest's status on the PARENT event, after the write
+```
+
+The integrator write (AIRLST-5842) takes any participation `status` and `extended_fields`. A
+cancel keeps the row as `cancelled` and frees its seat, so the guest can be re-added later. A
+move into a seat re-checks the quota and responds **422** while no seat is free, and the
+planning rules apply. `send_automated_email` (default `false`) gates the per-sub-event status
+email. A participation of another sub-event responds **404**.
+
 #### Get temporary signed url to upload file directly to cloud storage
 
 ```javascript
@@ -636,6 +657,23 @@ The optional fifth argument `waitlistAllSubeventsOnLimit` (AIRLST-5578, default 
 exactly as on `Guest.assignSubEvents()`. `assignGuestsSubEvents()` takes it too, as its own fifth
 argument, and the API evaluates it **per guest**: a guest whose batch meets an exhausted quota is
 waitlisted on all of its sub-events, while the rest of the call still books normally.
+
+#### Cancel a participation as a guest manager
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const { data } = await new GuestManager('event-uuid').cancelSubEventParticipation(
+  'guest-manager-uuid',
+  'participation-uuid',
+)
+
+data.participation.status // 'cancelled'
+```
+
+A guest manager cancels a participation of its own guest (AIRLST-5842). The row stays as
+`cancelled` and its seat is freed. A guest of another manager responds **403**, a sub-event
+out of the manager's reach **422**. The cancel sends no email.
 
 #### Promote a waitlisted participation as a guest manager
 

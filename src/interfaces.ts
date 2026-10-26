@@ -382,6 +382,28 @@ export interface SubEventParticipationInterface {
 }
 
 /**
+ * The integrator's participation write (AIRLST-5842): mainly `status: 'cancelled'`, which
+ * keeps the row and frees its seat.
+ */
+export interface UpdateSubEventParticipationBodyInterface {
+  status?: SubEventParticipationInterface['status']
+  /** The participation extended fields of the sub-event, merged into the stored values. */
+  extended_fields?: Record<string, unknown>
+  /** Whether a real transition may send the per-sub-event status email. Defaults to false. */
+  send_automated_email?: boolean
+}
+
+export interface UpdateSubEventParticipationAsIntegratorResponseInterface {
+  data: {
+    participation: SubEventParticipationInterface
+    /** Empty unless the write promoted a waitlisted row past guests who waited longer. */
+    warnings: Array<SubEventPromotionWarningInterface>
+    /** The guest's status on the PARENT event, after the silent derivation. */
+    guest: { status: BookingStatus }
+  }
+}
+
+/**
  * A warning of a manual promotion (AIRLST-5448): the promoted guest was not first in the FIFO
  * queue of their contingent. A warning only — the promotion is never blocked by the queue.
  */
