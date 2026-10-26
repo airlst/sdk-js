@@ -24,7 +24,43 @@ export interface EventInterface {
   sub_events_count: number
 }
 
-export interface SubEventInterface {
+/**
+ * The stable integration key and the descriptive content of a sub-event (AIRLST-5842).
+ * All nullable. The texts hold one language; core stores them and does not interpret them.
+ */
+export interface SubEventContentInterface {
+  /**
+   * Stable integration key, unique per parent event among live sub-events. Max 64
+   * characters: letters, digits, `-` and `_`.
+   */
+  key: string | null
+  /**
+   * Free category, for example `summit` or `side_event`. Max 64 characters.
+   */
+  category: string | null
+  /**
+   * Short text for lists. Max 500 characters.
+   */
+  teaser: string | null
+  /**
+   * Long text, plain text or HTML. Max 10 000 characters.
+   */
+  description: string | null
+  venue: string | null
+  contact_name: string | null
+  contact_email: string | null
+  /**
+   * Max 64 characters.
+   */
+  contact_phone: string | null
+  /**
+   * BCP 47 language tag, for example `de` or `en-GB`. Max 35 characters.
+   */
+  language: string | null
+  dress_code: string | null
+}
+
+export interface SubEventInterface extends SubEventContentInterface {
   id: string
   name: string
   starts_at: string
@@ -101,7 +137,8 @@ export interface GuestSubEventInterface {
  * Quota ROWS are never exposed on this surface — not the manager's, not the group's, not
  * the default one. The numbers below are all a manager gets.
  */
-export interface GuestManagerSubEventContingentInterface {
+export interface GuestManagerSubEventContingentInterface
+  extends SubEventContentInterface {
   id: string
   name: string
   starts_at: string
@@ -183,6 +220,62 @@ export interface SubEventQuotaInterface {
   guest_manager_name: string | null
   limit: number
   used: number
+}
+
+/**
+ * One row of a quota matrix write. A row has a `guest_group_id`, a `guest_manager_id`, or
+ * neither (the default row), never both, and the matrix holds at most one row per dimension.
+ * Guest groups and guest managers must belong to the parent event.
+ */
+export interface SubEventQuotaBodyInterface {
+  guest_group_id?: string | null
+  guest_manager_id?: string | null
+  /**
+   * 0 to 2 147 483 647.
+   */
+  limit: number
+}
+
+/**
+ * Body of `SubEvent.update()` (AIRLST-5842): a partial update, so every field is optional.
+ * `null` clears a content field.
+ */
+export interface UpdateSubEventBodyInterface
+  extends Partial<SubEventContentInterface> {
+  name?: string
+  /**
+   * ISO 8601 with offset. The API stores the UTC instant.
+   */
+  starts_at?: string
+  ends_at?: string
+  registration_mode?: 'invitation_only' | 'open'
+  /**
+   * `true` releases the sub-event for guest-manager booking (the server sets
+   * `released_at`), `false` withdraws the release.
+   */
+  released?: boolean
+  send_status_emails?: boolean
+  /**
+   * ISO 8601 with offset; null clears the deadline. See `SubEventInterface`.
+   */
+  response_deadline_at?: string | null
+  /**
+   * ISO 8601 with offset; must not be after `response_deadline_at`. A new value fires the
+   * reminder again.
+   */
+  reminder_at?: string | null
+}
+
+/**
+ * Body of `SubEvent.create()` (AIRLST-5842). `quotas` writes the quota matrix in the same
+ * transaction as the sub-event.
+ */
+export interface CreateSubEventBodyInterface
+  extends UpdateSubEventBodyInterface {
+  name: string
+  starts_at: string
+  ends_at: string
+  quotas?: Array<SubEventQuotaBodyInterface>
 }
 
 /**

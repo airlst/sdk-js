@@ -82,6 +82,46 @@ must not read it — use `GuestManager.listSubEvents()` instead, which returns o
 the acting manager can reach (released AND covered by a quota row for the manager or its guest
 group) and reports that manager's own contingent.
 
+Each sub-event also carries a stable integration `key` and its descriptive content
+(AIRLST-5842): `category`, `teaser`, `description`, `venue`, `contact_name`, `contact_email`,
+`contact_phone`, `language` and `dress_code`. All are nullable and hold one language.
+`list({ key })` returns only the live sub-event with that key: zero or one sub-event.
+
+```javascript
+const [sideEvent] = await new SubEvent('event-uuid').list({ key: 'deep-dive' })
+```
+
+#### Create and update a sub-event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvent = await new SubEvent('event-uuid').create({
+  name: 'Deep Dive: Batteries',
+  starts_at: '2027-05-03T09:00:00+02:00',
+  ends_at: '2027-05-03T11:00:00+02:00',
+  key: 'deep-dive',
+  category: 'side_event',
+  released: true,
+  quotas: [
+    { guest_group_id: 'market-a-uuid', limit: 12 },
+    { guest_group_id: 'market-b-uuid', limit: 8 },
+  ],
+})
+
+await new SubEvent('event-uuid').update(subEvent.id, { venue: 'Hall 4', teaser: null })
+```
+
+`create()` requires `name`, `starts_at` and `ends_at` (AIRLST-5842). A `key` that a live
+sub-event of the same event already uses responds 422; a deleted sub-event frees its key.
+`released: true` releases the sub-event for guest-manager booking. `quotas` writes the quota
+matrix in the same transaction: a row has a `guest_group_id`, a `guest_manager_id`, or neither
+(the default row), and its guest group or guest manager must belong to the event. `update()` is
+a partial update: only the submitted fields change, and `null` clears a content field. It does
+not take `quotas`. Both accept `response_deadline_at` and `reminder_at`; a reminder after the
+deadline responds 422. Both resolve to the sub-event with its quota state, in the shape of
+`list()`. Timestamps take an ISO 8601 offset; the API stores the UTC instant.
+
 #### Get temporary signed url to upload file directly to cloud storage
 
 ```javascript
