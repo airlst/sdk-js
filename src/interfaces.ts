@@ -99,9 +99,16 @@ export interface SubEventInterface extends SubEventContentInterface {
    */
   image_url: string | null
   /**
-   * Occupying participations only — statuses `invited` and `confirmed` (AIRLST-5445).
+   * Occupying participations only — statuses `planned`, `invited` and `confirmed`
+   * (AIRLST-5445, `planned` since AIRLST-5842).
    */
   participations_count: number
+  /**
+   * Plan before invitation (AIRLST-5842): null while the sub-event is in planning. Its
+   * assignments are then `planned`, and the guests do not see the sub-event yet.
+   * `SubEvent.sendInvitations()` sets it.
+   */
+  invitations_sent_at: string | null
   quotas: Array<SubEventQuotaInterface>
 }
 
@@ -162,7 +169,7 @@ export interface GuestManagerSubEventContingentInterface
    */
   image_url: string | null
   /**
-   * Occupying participations — statuses `invited` and `confirmed` — of THIS
+   * Occupying participations — statuses `planned`, `invited` and `confirmed` — of THIS
    * manager's guests. Always reported, also when the manager has no quota row.
    */
   booked: number
@@ -289,6 +296,21 @@ export interface CreateSubEventBodyInterface
   starts_at: string
   ends_at: string
   quotas?: Array<SubEventQuotaBodyInterface>
+  /**
+   * Plan before invitation (AIRLST-5842): true starts the sub-event in planning. A
+   * create-time choice only: `SubEvent.sendInvitations()` ends the planning.
+   */
+  plan_before_invitation?: boolean
+}
+
+/**
+ * Response of `SubEvent.sendInvitations()` (AIRLST-5842). The planned rows move to
+ * `invited` on the queue after the response.
+ */
+export interface SendSubEventInvitationsResponseInterface {
+  sub_event_id: string
+  /** How many `planned` rows the call moves. 0 when there are none. */
+  planned_count: number
 }
 
 /**
@@ -329,7 +351,17 @@ export type SubEventWaitlistCause =
 export interface SubEventParticipationInterface {
   id: string
   sub_event_id: string
-  status: 'invited' | 'confirmed' | 'declined' | 'cancelled' | 'waitlisted'
+  /**
+   * `planned` (AIRLST-5842): assigned while the sub-event is in planning. The row takes a
+   * seat, but the guest is not told yet; `SubEvent.sendInvitations()` moves it to `invited`.
+   */
+  status:
+    | 'planned'
+    | 'invited'
+    | 'confirmed'
+    | 'declined'
+    | 'cancelled'
+    | 'waitlisted'
   /**
    * Null on a row that is not waitlisted — and on a row waitlisted before the cause was
    * recorded, which reads as "unknown" (AIRLST-5448).

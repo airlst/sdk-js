@@ -161,6 +161,37 @@ await new SubEvent('event-uuid').deleteImage('sub-event-uuid')
 A new upload replaces the old image. Both methods return the sub-event in the shape of
 `list()`. A file of another type or above 5 MB responds **422**.
 
+#### Plan a sub-event before the invitation
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvents = new SubEvent('event-uuid')
+
+const sideEvent = await subEvents.create({
+  name: 'Deep Dive: Batteries',
+  starts_at: '2027-05-03T09:00:00+02:00',
+  ends_at: '2027-05-03T11:00:00+02:00',
+  plan_before_invitation: true,
+})
+
+// …assign guests: the rows are `planned`, nobody is told yet…
+
+const { planned_count } = await subEvents.sendInvitations(sideEvent.id)
+```
+
+`plan_before_invitation: true` on `create()` starts the sub-event in planning (AIRLST-5842).
+While it is in planning, `invitations_sent_at` is `null` and every assignment creates a
+`planned` participation, or a `waitlisted` one when the quota is full. A `planned` row takes a
+seat (`participations_count`, `used` and `booked` count it), sends no email and does not change
+the guest's status on the parent event. The guest endpoints do not show the sub-event yet.
+
+`sendInvitations()` ends the planning: the API sets `invitations_sent_at`, responds 202 with
+`planned_count`, and moves every `planned` row to `invited` on the queue. Pass `false` as the
+second argument to send no email; by default each row sends the email template hooked on
+`invited` when the sub-event's `send_status_emails` is on. A second call is safe and reports
+`planned_count: 0`. After it, new assignments are `invited` as usual.
+
 #### Get temporary signed url to upload file directly to cloud storage
 
 ```javascript
@@ -222,7 +253,8 @@ const { data } = await new Guest('event-uuid').get('guest-code')
 
 When the company's `sub-events` module is active, the guest object also carries
 `sub_event_participations` (AIRLST-5445): the guest's sub-event participations with their
-per-sub-event `status` (`invited`, `confirmed`, `declined`, `cancelled` or `waitlisted`).
+per-sub-event `status` (`planned`, `invited`, `confirmed`, `declined`, `cancelled` or
+`waitlisted`; `planned` while the sub-event is in planning, AIRLST-5842).
 The key is absent while the module is off.
 
 Every participation object — here and on every sub-event endpoint below — also reports why it
@@ -627,6 +659,10 @@ contingent. Otherwise it carries one entry `{ code: 'queue_skipped', guests_wait
 message }` — how many guests of the same contingent had waited longer, with a translated
 message. A warning only: the promotion is never blocked by the queue. The promoted row has left
 the waitlist, so its `waitlist_cause` and `queue_position` read `null`.
+
+While the sub-event is in planning (AIRLST-5842), the only target status is `planned`;
+`invited` and `confirmed` respond **422**. After its invitations are sent, `planned` responds
+**422**.
 
 ### GuestGroup methods
 

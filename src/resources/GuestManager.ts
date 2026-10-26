@@ -246,11 +246,15 @@ export const GuestManager = class {
    * their contingent; otherwise one `queue_skipped` entry says how many guests waited
    * longer — a warning only, the promotion is never blocked. The promoted row has left the
    * waitlist, so its `waitlist_cause` and `queue_position` read null.
+   *
+   * While the sub-event is in planning (AIRLST-5842), the only target status is
+   * `planned`; `invited` and `confirmed` respond 422. After its invitations are sent,
+   * `planned` responds 422.
    */
   public async promoteSubEventParticipation(
     guestManagerId: string,
     participationId: string,
-    status: 'invited' | 'confirmed',
+    status: 'planned' | 'invited' | 'confirmed',
   ): Promise<PromoteSubEventParticipationResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guest-managers/${guestManagerId}/participations/${participationId}/promote`,

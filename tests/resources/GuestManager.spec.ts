@@ -475,6 +475,22 @@ test('promoteSubEventParticipation()', async () => {
   )
 })
 
+test('promoteSubEventParticipation() to planned while the sub-event is in planning', async () => {
+  guestManager.promoteSubEventParticipation(
+    'guest-manager-uuid',
+    'participation-uuid',
+    'planned',
+  )
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/participations/participation-uuid/promote',
+    {
+      method: 'post',
+      body: JSON.stringify({ status: 'planned' }),
+    },
+  )
+})
+
 test('promoteSubEventParticipation() reports a skipped queue as a warning', async () => {
   // AIRLST-5448: the manager may promote past guests who waited longer; the response says
   // how many. A warning, never a block — and the promoted row leaves the waitlist.

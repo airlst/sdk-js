@@ -1,6 +1,7 @@
 import { Api } from '../Api'
 import {
   CreateSubEventBodyInterface,
+  SendSubEventInvitationsResponseInterface,
   SubEventInterface,
   SubEventQuotaBodyInterface,
   UpdateSubEventBodyInterface,
@@ -126,5 +127,31 @@ export const SubEvent = class {
     )
 
     return data.sub_event
+  }
+
+  /**
+   * Ends the planning of one sub-event (AIRLST-5842, plan before invitation). The API sets
+   * `invitations_sent_at` and moves every `planned` participation to `invited` on the
+   * queue (202). With `sendAutomatedEmail` true (the API default) and the sub-event's
+   * `send_status_emails` on, each row sends the email template hooked on `invited`. A
+   * second call is safe and reports `planned_count: 0`.
+   */
+  public async sendInvitations(
+    subEventId: string,
+    sendAutomatedEmail?: boolean,
+  ): Promise<SendSubEventInvitationsResponseInterface> {
+    const { data } = await Api.sendRequest(
+      `/events/${this.eventId}/sub-events/${subEventId}/send-invitations`,
+      {
+        method: 'post',
+        body: JSON.stringify(
+          sendAutomatedEmail !== undefined
+            ? { send_automated_email: sendAutomatedEmail }
+            : {},
+        ),
+      },
+    )
+
+    return data
   }
 }

@@ -286,3 +286,51 @@ test('deleteImage()', async () => {
     { method: 'DELETE' },
   )
 })
+
+test('sendInvitations()', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { sub_event_id: 'sub-event-uuid', planned_count: 143 },
+  })
+
+  const result = await subEvent.sendInvitations('sub-event-uuid')
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid/send-invitations',
+    { method: 'post', body: JSON.stringify({}) },
+  )
+  expect(result.planned_count).toBe(143)
+})
+
+test('sendInvitations() without emails', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { sub_event_id: 'sub-event-uuid', planned_count: 0 },
+  })
+
+  await subEvent.sendInvitations('sub-event-uuid', false)
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid/send-invitations',
+    { method: 'post', body: JSON.stringify({ send_automated_email: false }) },
+  )
+})
+
+test('create() starts a sub-event in planning', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { sub_event: { id: 'sub-event-uuid', invitations_sent_at: null } },
+  })
+
+  const body = {
+    name: 'Deep Dive',
+    starts_at: '2027-05-03T09:00:00+02:00',
+    ends_at: '2027-05-03T11:00:00+02:00',
+    plan_before_invitation: true,
+  }
+
+  const created = await subEvent.create(body)
+
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/sub-events', {
+    method: 'post',
+    body: JSON.stringify(body),
+  })
+  expect(created.invitations_sent_at).toBeNull()
+})
