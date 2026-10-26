@@ -541,3 +541,49 @@ test('promoteSubEventParticipation() reports a skipped queue as a warning', asyn
   expect(response.data.warnings[0].code).toBe('queue_skipped')
   expect(response.data.warnings[0].guests_waited_longer).toBe(1)
 })
+
+test('assignGuestSubEvents() sends the mandatory flag', async () => {
+  guestManager.assignGuestSubEvents(
+    'guest-manager-uuid',
+    'guest-code',
+    ['sub-event-uuid-1'],
+    undefined,
+    undefined,
+    true,
+  )
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        sub_event_ids: ['sub-event-uuid-1'],
+        mandatory: true,
+      }),
+    },
+  )
+})
+
+test('assignGuestsSubEvents() sends the mandatory flag', async () => {
+  guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1', 'guest-code-2'],
+    ['sub-event-uuid-1'],
+    undefined,
+    false,
+    true,
+  )
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        guests: ['guest-code-1', 'guest-code-2'],
+        sub_event_ids: ['sub-event-uuid-1'],
+        waitlist_all_subevents_on_limit: false,
+        mandatory: true,
+      }),
+    },
+  )
+})

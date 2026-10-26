@@ -722,3 +722,37 @@ test('getImport()', async () => {
     '/events/event-uuid/guests/import/import-uuid',
   )
 })
+
+test('assignSubEvents() sends the mandatory flag', async () => {
+  // AIRLST-5842: confirmed without an RSVP, never waitlisted.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [
+        {
+          id: 'p1',
+          sub_event_id: 'se1',
+          status: 'confirmed',
+          is_mandatory: true,
+        },
+      ],
+      overlap_warnings: [],
+    },
+  })
+
+  const { data } = await guest.assignSubEvents(
+    'guest-code',
+    ['se1'],
+    undefined,
+    undefined,
+    true,
+  )
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: '{"sub_event_ids":["se1"],"mandatory":true}',
+    },
+  )
+  expect(data.participations[0].is_mandatory).toBe(true)
+})

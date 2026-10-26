@@ -363,3 +363,36 @@ test('updateParticipation() cancels a participation', async () => {
   expect(data.participation.status).toBe('cancelled')
   expect(data.guest.status).toBe('cancelled')
 })
+
+test('syncQuotas() sends a mandatory guest-group row', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_event: {
+        id: 'sub-event-uuid',
+        quotas: [
+          {
+            id: 'quota-uuid',
+            guest_group_id: 'market-a-uuid',
+            guest_manager_id: null,
+            guest_manager_name: null,
+            limit: 12,
+            used: 12,
+            mandatory: true,
+          },
+        ],
+      },
+    },
+  })
+
+  const quotas = [
+    { guest_group_id: 'market-a-uuid', limit: 12, mandatory: true },
+  ]
+
+  const synced = await subEvent.syncQuotas('sub-event-uuid', quotas)
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid/quotas',
+    { method: 'put', body: JSON.stringify({ quotas }) },
+  )
+  expect(synced.quotas[0].mandatory).toBe(true)
+})

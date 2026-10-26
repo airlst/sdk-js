@@ -160,12 +160,18 @@ export const Guest = class {
    * row produced it — the guest's group row, a guest-manager row, or the default row. A
    * waitlisted participation occupies no seat, so the free sub-events keep theirs and
    * the guest can be promoted one participation at a time later.
+   *
+   * `mandatory` (AIRLST-5842, default false) makes every participation of the call
+   * mandatory: `confirmed` without an RSVP (`planned` while the sub-event is in planning),
+   * never waitlisted, also on a full quota, and the guest cannot answer it. A mandatory
+   * participation does not change the guest's status on the parent event.
    */
   public async assignSubEvents(
     code: string,
     subEventIds: Array<string>,
     extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
     waitlistAllSubeventsOnLimit?: boolean,
+    mandatory?: boolean,
   ): Promise<AssignSubEventsResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guests/${code}/sub-events`,
@@ -179,6 +185,7 @@ export const Guest = class {
           ...(waitlistAllSubeventsOnLimit !== undefined && {
             waitlist_all_subevents_on_limit: waitlistAllSubeventsOnLimit,
           }),
+          ...(mandatory !== undefined && { mandatory }),
         }),
       },
     )
@@ -210,6 +217,8 @@ export const Guest = class {
    * 422 (reactivate the guest on the parent event first). After the sub-event's
    * `response_deadline_at` a confirm responds 422 too (AIRLST-5842). A decline is always
    * allowed, also after the deadline. A participation of another guest responds 404.
+   * A mandatory participation (`is_mandatory` true, AIRLST-5842) is not the guest's to
+   * answer: confirm and decline both respond 422 on `status`.
    *
    * `sendAutomatedEmail` (default true) gates the per-SubEvent status email together
    * with the sub-event's own `send_status_emails` switch.

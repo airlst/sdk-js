@@ -164,6 +164,11 @@ export const GuestManager = class {
    * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) behaves exactly as on
    * `Guest.assignSubEvents()`: when ANY requested sub-event has no free seat for this
    * guest, EVERY participation of the call is created as `waitlisted`.
+   *
+   * `mandatory` (AIRLST-5842, default false) makes every participation of the call
+   * mandatory: `confirmed` without an RSVP (`planned` while the sub-event is in planning),
+   * never waitlisted, also on a full quota, and the guest cannot answer it. A mandatory
+   * participation does not change the guest's status on the parent event.
    */
   public async assignGuestSubEvents(
     guestManagerId: string,
@@ -171,6 +176,7 @@ export const GuestManager = class {
     subEventIds: Array<string>,
     extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
     waitlistAllSubeventsOnLimit?: boolean,
+    mandatory?: boolean,
   ): Promise<AssignSubEventsResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guest-managers/${guestManagerId}/guests/${code}/sub-events`,
@@ -184,6 +190,7 @@ export const GuestManager = class {
           ...(waitlistAllSubeventsOnLimit !== undefined && {
             waitlist_all_subevents_on_limit: waitlistAllSubeventsOnLimit,
           }),
+          ...(mandatory !== undefined && { mandatory }),
         }),
       },
     )
@@ -208,6 +215,11 @@ export const GuestManager = class {
    * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) is evaluated PER GUEST,
    * inside that guest's own transaction: a guest whose batch meets an exhausted quota is
    * waitlisted on all of its sub-events, while the rest of the call still books normally.
+   *
+   * `mandatory` (AIRLST-5842, default false) makes every participation of the call
+   * mandatory: `confirmed` without an RSVP (`planned` while the sub-event is in planning),
+   * never waitlisted, also on a full quota, and the guest cannot answer it. A mandatory
+   * participation does not change the guest's status on the parent event.
    */
   public async assignGuestsSubEvents(
     guestManagerId: string,
@@ -215,6 +227,7 @@ export const GuestManager = class {
     subEventIds: Array<string>,
     extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
     waitlistAllSubeventsOnLimit?: boolean,
+    mandatory?: boolean,
   ): Promise<BulkAssignSubEventsResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guest-managers/${guestManagerId}/sub-events/assignments`,
@@ -229,6 +242,7 @@ export const GuestManager = class {
           ...(waitlistAllSubeventsOnLimit !== undefined && {
             waitlist_all_subevents_on_limit: waitlistAllSubeventsOnLimit,
           }),
+          ...(mandatory !== undefined && { mandatory }),
         }),
       },
     )

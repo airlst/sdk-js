@@ -142,6 +142,12 @@ the matrix holds at most one row per dimension. Guest groups and guest managers 
 the event. A kept row keeps its `id`; an empty array clears the matrix. It resolves to the
 sub-event with the quota state of every row.
 
+`mandatory: true` on a guest-group row (AIRLST-5842) makes the sub-event mandatory for the whole
+market: every guest of the group, also guests added later, is assigned on the queue as a
+confirmed mandatory participation. A guest who was cancelled out of the sub-event or declined it
+is not added back, and no email goes out. Only a guest-group row can be mandatory: on a
+guest-manager or default row the API responds **422**. Each quota row reports `mandatory`.
+
 Each sub-event also reports `image_url` (AIRLST-5842), `null` without an image.
 
 #### Set or remove the image of a sub-event
@@ -318,6 +324,12 @@ it — the guest's group row, a guest-manager row, or the default row. A waitlis
 occupies no seat, so the free sub-events keep theirs and the guest can be promoted one
 participation at a time later. Pass `undefined` for the extended fields to use it on its own.
 
+The optional fifth argument `mandatory` (AIRLST-5842, default `false`) makes every participation
+of the call mandatory: `confirmed` without an RSVP (`planned` while the sub-event is in
+planning), never waitlisted, also on a full quota. Each participation reports `is_mandatory`.
+The guest cannot answer a mandatory participation: `updateSubEventParticipation()` responds
+**422**. A mandatory participation does not change the guest's status on the parent event.
+
 The response also carries `overlap_warnings` (AIRLST-5446): groups of the guest's sub-events
 that overlap in time, limited to groups the just-created participations touch. It is a warning
 only — the API never blocks an assignment because of an overlap.
@@ -379,6 +391,9 @@ field: at assign time the derived value carries no information.
 
 The optional fourth argument `sendAutomatedEmail` (default true) gates the per-SubEvent status
 email together with the sub-event's own `send_status_emails` switch.
+
+A mandatory participation (`is_mandatory: true`, AIRLST-5842) is not the guest's to answer:
+confirm and decline both respond **422** on `status`.
 
 #### Promote a waitlisted participation as the guest
 
@@ -657,6 +672,9 @@ The optional fifth argument `waitlistAllSubeventsOnLimit` (AIRLST-5578, default 
 exactly as on `Guest.assignSubEvents()`. `assignGuestsSubEvents()` takes it too, as its own fifth
 argument, and the API evaluates it **per guest**: a guest whose batch meets an exhausted quota is
 waitlisted on all of its sub-events, while the rest of the call still books normally.
+
+Both methods take `mandatory` (AIRLST-5842) as their sixth argument, with the same meaning as on
+`Guest.assignSubEvents()`.
 
 #### Cancel a participation as a guest manager
 

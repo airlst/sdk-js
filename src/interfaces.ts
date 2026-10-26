@@ -240,6 +240,12 @@ export interface SubEventQuotaInterface {
   guest_manager_name: string | null
   limit: number
   used: number
+  /**
+   * "Mandatory for the whole market" (AIRLST-5842): on a guest-group row, every guest of the
+   * group, also guests added later, is assigned automatically as a confirmed mandatory
+   * participation. Always false on guest-manager and default rows.
+   */
+  mandatory: boolean
 }
 
 /**
@@ -254,6 +260,15 @@ export interface SubEventQuotaBodyInterface {
    * 0 to 2 147 483 647.
    */
   limit: number
+  /**
+   * "Mandatory for the whole market" (AIRLST-5842). Only on a guest-group row: on a
+   * guest-manager or default row the API responds 422 on `quotas.{index}.mandatory`.
+   * Every guest of the group, also guests added later, is assigned on the queue as a
+   * confirmed mandatory participation (`planned` while the sub-event is in planning). A
+   * guest who was cancelled out of the sub-event or declined it is not added back. No
+   * email. Defaults to false.
+   */
+  mandatory?: boolean
 }
 
 /**
@@ -379,6 +394,12 @@ export interface SubEventParticipationInterface {
    * its quota row is gone.
    */
   queue_position: number | null
+  /**
+   * A mandatory participation (AIRLST-5842): confirmed without an RSVP, never waitlisted,
+   * and the guest cannot answer it. It does not change the guest's status on the parent
+   * event.
+   */
+  is_mandatory: boolean
 }
 
 /**
