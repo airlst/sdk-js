@@ -282,6 +282,46 @@ export const Guest = class {
     )
   }
 
+  /**
+   * The guest books one open sub-event, first come, first served (AIRLST-5842).
+   *
+   * - Only a sub-event with `registration_mode: 'open'`; an `invitation_only` one responds
+   *   422 and stays with `assignSubEvents()`.
+   * - A sub-event in planning, or of another event, responds 404: the guest does not see it.
+   * - While a seat is free the guest is `confirmed` at once. When a quota row or the
+   *   sub-event's `capacity` is full, the guest is `waitlisted`, and `waitlist_cause` says
+   *   which one (`capacity` for the overall cap).
+   * - After the sub-event's `response_deadline_at` the booking responds 422.
+   * - An active participation (`planned`, `invited`, `confirmed`, `waitlisted`) responds 422:
+   *   answer it with `updateSubEventParticipation()` instead. A `cancelled` or `declined`
+   *   participation is booked again (the same row).
+   * - A guest who is `cancelled` or `declined` on the parent event responds 422.
+   *
+   * `sendAutomatedEmail` (default true, like the RSVP) gates the per-sub-event email of
+   * `confirmed` together with the sub-event's own `send_status_emails` switch. The guest's
+   * status on the PARENT event is derived and reported as `data.guest.status`.
+   */
+  public async bookSubEvent(
+    code: string,
+    subEventId: string,
+    options: BookSubEventOptionsInterface = {},
+  ): Promise<BookSubEventResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guests/${code}/sub-events/${subEventId}/book`,
+      {
+        method: 'post',
+        body: JSON.stringify({
+          ...(options.extendedFields !== undefined && {
+            extended_fields: options.extendedFields,
+          }),
+          ...(options.sendAutomatedEmail !== undefined && {
+            send_automated_email: options.sendAutomatedEmail,
+          }),
+        }),
+      },
+    )
+  }
+
   public async update(
     code: string,
     body: UpdateBodyInterface,
@@ -476,6 +516,24 @@ interface UpdateSubEventParticipationResponseInterface {
      * (AIRLST-5447). Reported by this endpoint only: at assign time the derived value
      * carries no information, so the assign endpoints do not return it.
      */
+    guest: {
+      status: BookingStatus
+    }
+  }
+}
+
+export interface BookSubEventOptionsInterface {
+  /** Values for the participation fields of the sub-event, keyed by field key. */
+  extendedFields?: Record<string, unknown>
+  /** Whether the per-sub-event email of `confirmed` may go out. Defaults to true. */
+  sendAutomatedEmail?: boolean
+}
+
+export interface BookSubEventResponseInterface {
+  data: {
+    /** `confirmed`, or `waitlisted` with its `waitlist_cause` when no seat was free. */
+    participation: SubEventParticipationInterface
+    /** The guest's status on the PARENT event after the booking. */
     guest: {
       status: BookingStatus
     }

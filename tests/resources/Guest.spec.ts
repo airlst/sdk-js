@@ -394,6 +394,57 @@ test('updateSubEventParticipation() sends the automated-email opt-out', async ()
   )
 })
 
+test('bookSubEvent() sends no body fields without options', async () => {
+  guest.bookSubEvent('guest-code', 'sub-event-uuid')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events/sub-event-uuid/book',
+    { method: 'post', body: JSON.stringify({}) },
+  )
+})
+
+test('bookSubEvent() maps the options to the API keys', async () => {
+  guest.bookSubEvent('guest-code', 'sub-event-uuid', {
+    extendedFields: { shirt_size: 'M' },
+    sendAutomatedEmail: false,
+  })
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guests/guest-code/sub-events/sub-event-uuid/book',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        extended_fields: { shirt_size: 'M' },
+        send_automated_email: false,
+      }),
+    },
+  )
+})
+
+test('bookSubEvent() reports a waitlisting on a full capacity', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: {
+        id: 'participation-uuid',
+        sub_event_id: 'sub-event-uuid',
+        status: 'waitlisted',
+        is_mandatory: false,
+        waitlist_cause: 'capacity',
+        waitlist_cause_quota_id: null,
+        queue_position: 3,
+      },
+      guest: { status: 'invited' },
+    },
+  })
+
+  const { data } = await guest.bookSubEvent('guest-code', 'sub-event-uuid')
+
+  expect(data.participation.waitlist_cause).toBe('capacity')
+  expect(data.participation.queue_position).toBe(3)
+  expect(data.guest.status).toBe('invited')
+})
+
 test('promoteSubEventParticipation()', async () => {
   // The key-authed guest promote (AIRLST-5407, ACP-30143): invited or confirmed, every
   // applicable quota row re-checked under locks, and the derived parent status rides along.

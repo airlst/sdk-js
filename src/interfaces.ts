@@ -99,6 +99,12 @@ export interface SubEventInterface extends SubEventContentInterface {
    */
   image_url: string | null
   /**
+   * The overall seat count across all guests, on top of the quota matrix (AIRLST-5842).
+   * Once the occupying participations reach it, every further assignment or booking is
+   * waitlisted with cause `capacity`. Null: no overall cap.
+   */
+  capacity: number | null
+  /**
    * Occupying participations only — statuses `planned`, `invited` and `confirmed`
    * (AIRLST-5445, `planned` since AIRLST-5842).
    */
@@ -299,6 +305,10 @@ export interface UpdateSubEventBodyInterface
    * reminder again.
    */
   reminder_at?: string | null
+  /**
+   * The overall seat count (0 to 2147483647); null removes the cap. See `SubEventInterface`.
+   */
+  capacity?: number | null
 }
 
 /**
@@ -362,6 +372,8 @@ export type SubEventWaitlistCause =
   | 'default'
   | 'all_or_nothing'
   | 'manual'
+  /** The sub-event's overall `capacity` was full (AIRLST-5842). No quota row. */
+  | 'capacity'
 
 export interface SubEventParticipationInterface {
   id: string

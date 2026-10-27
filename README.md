@@ -119,8 +119,9 @@ matrix in the same transaction: a row has a `guest_group_id`, a `guest_manager_i
 (the default row), and its guest group or guest manager must belong to the event. `update()` is
 a partial update: only the submitted fields change, and `null` clears a content field. It does
 not take `quotas`. Both accept `response_deadline_at` and `reminder_at`; a reminder after the
-deadline responds 422. Both resolve to the sub-event with its quota state, in the shape of
-`list()`. Timestamps take an ISO 8601 offset; the API stores the UTC instant.
+deadline responds 422. Both accept `capacity` (AIRLST-5842): the overall seat count on top of
+the quota matrix, `null` for no cap; a full capacity waitlists with cause `capacity`. Both
+resolve to the sub-event with its quota state, in the shape of `list()`. Timestamps take an ISO 8601 offset; the API stores the UTC instant.
 
 #### Write the quota matrix of a sub-event
 
@@ -423,6 +424,32 @@ contingent. Otherwise it carries one entry `{ code: 'queue_skipped', guests_wait
 message }` — how many guests of the same contingent had waited longer, with a translated
 message. A warning only: the promotion is never blocked by the queue. The promoted row has left
 the waitlist, so its `waitlist_cause` and `queue_position` read `null`.
+
+#### Book an open sub-event as the guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').bookSubEvent(
+  'guest-code',
+  'sub-event-uuid',
+  { sendAutomatedEmail: true }, // optional: extendedFields, sendAutomatedEmail
+)
+
+data.participation.status // 'confirmed', or 'waitlisted' when no seat was free
+data.participation.waitlist_cause // 'capacity' when the overall capacity was full
+data.guest.status // the guest's status on the PARENT event, after the booking
+```
+
+First come, first served (AIRLST-5842): the guest books one sub-event whose
+`registration_mode` is `open`. While a seat is free the guest is `confirmed` at once; when a
+quota row or the sub-event's `capacity` is full, the guest is `waitlisted`, and
+`waitlist_cause` names the quota row's kind or `capacity`. An `invitation_only` sub-event, a
+passed `response_deadline_at`, an active participation (answer it with
+`updateSubEventParticipation()`) and a guest who is cancelled or declined on the parent event
+respond **422**. A sub-event in planning or of another event responds **404**. A `cancelled` or
+`declined` participation is booked again. `sendAutomatedEmail` (default `true`) gates the
+per-sub-event email of `confirmed`.
 
 #### Create a new guest
 
