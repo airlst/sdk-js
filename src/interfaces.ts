@@ -407,6 +407,11 @@ export interface SubEventParticipationInterface {
    */
   queue_position: number | null
   /**
+   * Set when the guest booked the seat through `bookSubEvent()` (also on a re-booking);
+   * null for rows assigned by an integrator, a guest manager or an admin. Read-only.
+   */
+  booked_by_guest_at: string | null
+  /**
    * A mandatory participation (AIRLST-5842): confirmed without an RSVP, never waitlisted,
    * and the guest cannot answer it. It does not change the guest's status on the parent
    * event.
