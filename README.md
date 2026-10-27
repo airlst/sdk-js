@@ -433,7 +433,7 @@ import { Guest } from '@airlst/sdk'
 const { data } = await new Guest('event-uuid').bookSubEvent(
   'guest-code',
   'sub-event-uuid',
-  { sendAutomatedEmail: true }, // optional: extendedFields, sendAutomatedEmail
+  { send_automated_email: true }, // optional: extended_fields, send_automated_email
 )
 
 data.participation.status // 'confirmed', or 'waitlisted' when no seat was free
@@ -448,7 +448,7 @@ quota row or the sub-event's `capacity` is full, the guest is `waitlisted`, and
 passed `response_deadline_at`, an active participation (answer it with
 `updateSubEventParticipation()`) and a guest who is cancelled or declined on the parent event
 respond **422**. A sub-event in planning or of another event responds **404**. A `cancelled` or
-`declined` participation is booked again. `sendAutomatedEmail` (default `true`) gates the
+`declined` participation is booked again. `send_automated_email` (default `true`) gates the
 per-sub-event email of `confirmed`.
 
 #### Create a new guest

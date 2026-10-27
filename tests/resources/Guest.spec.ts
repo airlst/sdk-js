@@ -394,7 +394,7 @@ test('updateSubEventParticipation() sends the automated-email opt-out', async ()
   )
 })
 
-test('bookSubEvent() sends no body fields without options', async () => {
+test('bookSubEvent() sends an empty body by default', async () => {
   guest.bookSubEvent('guest-code', 'sub-event-uuid')
 
   expect(apiMock).toHaveBeenCalledTimes(1)
@@ -404,10 +404,10 @@ test('bookSubEvent() sends no body fields without options', async () => {
   )
 })
 
-test('bookSubEvent() maps the options to the API keys', async () => {
+test('bookSubEvent() sends the body as it is', async () => {
   guest.bookSubEvent('guest-code', 'sub-event-uuid', {
-    extendedFields: { shirt_size: 'M' },
-    sendAutomatedEmail: false,
+    extended_fields: { shirt_size: 'M' },
+    send_automated_email: false,
   })
 
   expect(apiMock).toHaveBeenCalledWith(

@@ -297,27 +297,20 @@ export const Guest = class {
    *   participation is booked again (the same row).
    * - A guest who is `cancelled` or `declined` on the parent event responds 422.
    *
-   * `sendAutomatedEmail` (default true, like the RSVP) gates the per-sub-event email of
+   * `send_automated_email` (default true, like the RSVP) gates the per-sub-event email of
    * `confirmed` together with the sub-event's own `send_status_emails` switch. The guest's
    * status on the PARENT event is derived and reported as `data.guest.status`.
    */
   public async bookSubEvent(
     code: string,
     subEventId: string,
-    options: BookSubEventOptionsInterface = {},
+    body: BookSubEventBodyInterface = {},
   ): Promise<BookSubEventResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guests/${code}/sub-events/${subEventId}/book`,
       {
         method: 'post',
-        body: JSON.stringify({
-          ...(options.extendedFields !== undefined && {
-            extended_fields: options.extendedFields,
-          }),
-          ...(options.sendAutomatedEmail !== undefined && {
-            send_automated_email: options.sendAutomatedEmail,
-          }),
-        }),
+        body: JSON.stringify(body),
       },
     )
   }
@@ -522,11 +515,11 @@ interface UpdateSubEventParticipationResponseInterface {
   }
 }
 
-export interface BookSubEventOptionsInterface {
+export interface BookSubEventBodyInterface {
   /** Values for the participation fields of the sub-event, keyed by field key. */
-  extendedFields?: Record<string, unknown>
+  extended_fields?: Record<string, unknown>
   /** Whether the per-sub-event email of `confirmed` may go out. Defaults to true. */
-  sendAutomatedEmail?: boolean
+  send_automated_email?: boolean
 }
 
 export interface BookSubEventResponseInterface {
