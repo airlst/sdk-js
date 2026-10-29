@@ -326,8 +326,10 @@ export interface CreateMainBodyInterface extends CreateCompanionBodyInterface {
   companions?: Array<CreateNestedCompanionBodyInterface>
 }
 
+// No `code`: the Suite always generates the guest code (AIRLST-6003). The create
+// and recommendation endpoints refuse a `code` with 422, and the companion
+// endpoints ignore it.
 export interface CreateCompanionBodyInterface {
-  code?: string
   role?: string
   extended_fields?: object
   contact?: ContactInterface
