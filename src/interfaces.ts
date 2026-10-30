@@ -105,14 +105,18 @@ export interface SubEventInterface extends SubEventContentInterface {
    */
   capacity: number | null
   /**
-   * Occupying participations only — statuses `planned`, `invited` and `confirmed`
-   * (AIRLST-5445, `planned` since AIRLST-5842).
+   * Occupying participations only — statuses `listed`, `invited` and `confirmed`
+   * (AIRLST-5445, `listed` since AIRLST-5842).
    */
   participations_count: number
   /**
-   * Plan before invitation (AIRLST-5842): null while the sub-event is in planning. Its
-   * assignments are then `planned`, and the guests do not see the sub-event yet.
-   * `SubEvent.sendInvitations()` sets it.
+   * The status of a new assignment (AIRLST-5842): `listed` (on the list, the guest is not
+   * told yet) or `invited`. `SubEvent.sendInvitations()` sets it to `invited`.
+   */
+  default_assignment_status: SubEventDefaultAssignmentStatus
+  /**
+   * Null until the first send of the invitations (AIRLST-5842). Until then the guests do
+   * not see the sub-event. `SubEvent.sendInvitations()` sets it; a later send keeps it.
    */
   invitations_sent_at: string | null
   quotas: Array<SubEventQuotaInterface>
@@ -171,11 +175,15 @@ export interface GuestManagerSubEventContingentInterface
    */
   released_at: string
   /**
+   * The status the manager's next assignment gets (AIRLST-5842): `listed` or `invited`.
+   */
+  default_assignment_status: SubEventDefaultAssignmentStatus
+  /**
    * The URL of the sub-event image (AIRLST-5842); null without one.
    */
   image_url: string | null
   /**
-   * Occupying participations — statuses `planned`, `invited` and `confirmed` — of THIS
+   * Occupying participations — statuses `listed`, `invited` and `confirmed` — of THIS
    * manager's guests. Always reported, also when the manager has no quota row.
    */
   booked: number
@@ -270,7 +278,7 @@ export interface SubEventQuotaBodyInterface {
    * "Mandatory for the whole market" (AIRLST-5842). Only on a guest-group row: on a
    * guest-manager or default row the API responds 422 on `quotas.{index}.mandatory`.
    * Every guest of the group, also guests added later, is assigned on the queue as a
-   * confirmed mandatory participation (`planned` while the sub-event is in planning). A
+   * confirmed mandatory participation (`listed` while the sub-event is listing). A
    * guest who was cancelled out of the sub-event or declined it is not added back. No
    * email. Defaults to false.
    */
@@ -309,6 +317,12 @@ export interface UpdateSubEventBodyInterface
    * The overall seat count (0 to 2147483647); null removes the cap. See `SubEventInterface`.
    */
   capacity?: number | null
+  /**
+   * The status of a new assignment (AIRLST-5842). Default `invited` on create. Set it back
+   * to `listed` after a send to list the next wave. `invited` responds 422 on update while
+   * `invitations_sent_at` is null: send the invitations first.
+   */
+  default_assignment_status?: SubEventDefaultAssignmentStatus
 }
 
 /**
@@ -321,21 +335,22 @@ export interface CreateSubEventBodyInterface
   starts_at: string
   ends_at: string
   quotas?: Array<SubEventQuotaBodyInterface>
-  /**
-   * Plan before invitation (AIRLST-5842): true starts the sub-event in planning. A
-   * create-time choice only: `SubEvent.sendInvitations()` ends the planning.
-   */
-  plan_before_invitation?: boolean
 }
 
 /**
- * Response of `SubEvent.sendInvitations()` (AIRLST-5842). The planned rows move to
+ * `listed` keeps new assignments on the list until `SubEvent.sendInvitations()`;
+ * `invited` invites directly (AIRLST-5842).
+ */
+export type SubEventDefaultAssignmentStatus = 'listed' | 'invited'
+
+/**
+ * Response of `SubEvent.sendInvitations()` (AIRLST-5842). The listed rows move to
  * `invited` on the queue after the response.
  */
 export interface SendSubEventInvitationsResponseInterface {
   sub_event_id: string
-  /** How many `planned` rows the call moves. 0 when there are none. */
-  planned_count: number
+  /** How many `listed` rows the call moves. 0 when there are none. */
+  listed_count: number
 }
 
 /**
@@ -379,11 +394,12 @@ export interface SubEventParticipationInterface {
   id: string
   sub_event_id: string
   /**
-   * `planned` (AIRLST-5842): assigned while the sub-event is in planning. The row takes a
-   * seat, but the guest is not told yet; `SubEvent.sendInvitations()` moves it to `invited`.
+   * `listed` (AIRLST-5842): assigned while the sub-event lists new assignments. The row
+   * takes a seat, but the guest is not told yet; `SubEvent.sendInvitations()` moves it to
+   * `invited`.
    */
   status:
-    | 'planned'
+    | 'listed'
     | 'invited'
     | 'confirmed'
     | 'declined'

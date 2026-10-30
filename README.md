@@ -179,25 +179,35 @@ const sideEvent = await subEvents.create({
   name: 'Deep Dive: Batteries',
   starts_at: '2027-05-03T09:00:00+02:00',
   ends_at: '2027-05-03T11:00:00+02:00',
-  plan_before_invitation: true,
+  default_assignment_status: 'listed',
 })
 
-// …assign guests: the rows are `planned`, nobody is told yet…
+// …assign guests: the rows are `listed`, nobody is told yet…
 
-const { planned_count } = await subEvents.sendInvitations(sideEvent.id)
+const { listed_count } = await subEvents.sendInvitations(sideEvent.id)
+
+// Later: list a second wave, then send again.
+await subEvents.update(sideEvent.id, { default_assignment_status: 'listed' })
 ```
 
-`plan_before_invitation: true` on `create()` starts the sub-event in planning (AIRLST-5842).
-While it is in planning, `invitations_sent_at` is `null` and every assignment creates a
-`planned` participation, or a `waitlisted` one when the quota is full. A `planned` row takes a
+`default_assignment_status` (AIRLST-5842) is the status of a new assignment: `listed` or
+`invited` (the default). While it is `listed`, every assignment creates a `listed`
+participation, or a `waitlisted` one when the quota is full. A `listed` row takes a
 seat (`participations_count`, `used` and `booked` count it), sends no email and does not change
-the guest's status on the parent event. The guest endpoints do not show the sub-event yet.
+the guest's status on the parent event. A guest never sees a `listed` row: the guest endpoints
+leave the sub-event out for that guest, and they leave it out for every guest until the first
+send (`invitations_sent_at` is `null`). A guest booking is never `listed`.
 
-`sendInvitations()` ends the planning: the API sets `invitations_sent_at`, responds 202 with
-`planned_count`, and moves every `planned` row to `invited` on the queue. Pass `false` as the
-second argument to send no email; by default each row sends the email template hooked on
-`invited` when the sub-event's `send_status_emails` is on. A second call is safe and reports
-`planned_count: 0`. After it, new assignments are `invited` as usual.
+`sendInvitations()` sets `default_assignment_status` to `invited`, sets `invitations_sent_at`
+on the first send, responds 202 with `listed_count`, and moves every `listed` row to `invited`
+on the queue. Pass `false` as the second argument to send no email; by default each row sends
+the email template hooked on `invited` when the sub-event's `send_status_emails` is on. A
+second call is safe and reports `listed_count: 0`. After it, new assignments are `invited`.
+To list a next wave, set `default_assignment_status` back to `listed` with `update()` and send
+again. `update()` with `invited` responds **422** while `invitations_sent_at` is `null`.
+
+The status `listed` was `planned`, and `default_assignment_status` replaced
+`plan_before_invitation` (AIRLST-5842 F3). The API no longer accepts the old names.
 
 #### Cancel or update a participation as the integrator
 
@@ -217,7 +227,7 @@ data.guest.status // the guest's status on the PARENT event, after the write
 The integrator write (AIRLST-5842) takes any participation `status` and `extended_fields`. A
 cancel keeps the row as `cancelled` and frees its seat, so the guest can be re-added later. A
 move into a seat re-checks the quota and responds **422** while no seat is free, and the
-planning rules apply. `send_automated_email` (default `false`) gates the per-sub-event status
+listing rules apply. `send_automated_email` (default `false`) gates the per-sub-event status
 email. A participation of another sub-event responds **404**.
 
 #### Get temporary signed url to upload file directly to cloud storage
@@ -281,8 +291,8 @@ const { data } = await new Guest('event-uuid').get('guest-code')
 
 When the company's `sub-events` module is active, the guest object also carries
 `sub_event_participations` (AIRLST-5445): the guest's sub-event participations with their
-per-sub-event `status` (`planned`, `invited`, `confirmed`, `declined`, `cancelled` or
-`waitlisted`; `planned` while the sub-event is in planning, AIRLST-5842).
+per-sub-event `status` (`listed`, `invited`, `confirmed`, `declined`, `cancelled` or
+`waitlisted`; `listed` while the sub-event lists new assignments, AIRLST-5842).
 The key is absent while the module is off.
 
 Every participation object — here and on every sub-event endpoint below — also reports why it
@@ -326,8 +336,8 @@ occupies no seat, so the free sub-events keep theirs and the guest can be promot
 participation at a time later. Pass `undefined` for the extended fields to use it on its own.
 
 The optional fifth argument `mandatory` (AIRLST-5842, default `false`) makes every participation
-of the call mandatory: `confirmed` without an RSVP (`planned` while the sub-event is in
-planning), never waitlisted, also on a full quota. Each participation reports `is_mandatory`.
+of the call mandatory: `confirmed` without an RSVP (`listed` while the sub-event is
+listing), never waitlisted, also on a full quota. Each participation reports `is_mandatory`.
 The guest cannot answer a mandatory participation: `updateSubEventParticipation()` responds
 **422**. A mandatory participation does not change the guest's status on the parent event.
 
@@ -447,7 +457,8 @@ quota row or the sub-event's `capacity` is full, the guest is `waitlisted`, and
 `waitlist_cause` names the quota row's kind or `capacity`. An `invitation_only` sub-event, a
 passed `response_deadline_at`, an active participation (answer it with
 `updateSubEventParticipation()`) and a guest who is cancelled or declined on the parent event
-respond **422**. A sub-event in planning or of another event responds **404**. A `cancelled` or
+respond **422**. A sub-event whose first invitations are not sent, one where the guest's own row is `listed`,
+or one of another event responds **404**. A `cancelled` or
 `declined` participation is booked again. `send_automated_email` (default `true`) gates the
 per-sub-event email of `confirmed`.
 
@@ -743,9 +754,9 @@ message }` — how many guests of the same contingent had waited longer, with a 
 message. A warning only: the promotion is never blocked by the queue. The promoted row has left
 the waitlist, so its `waitlist_cause` and `queue_position` read `null`.
 
-While the sub-event is in planning (AIRLST-5842), the only target status is `planned`;
-`invited` and `confirmed` respond **422**. After its invitations are sent, `planned` responds
-**422**.
+While the sub-event lists new assignments (AIRLST-5842, `default_assignment_status: listed`),
+the only target status is `listed`; `invited` and `confirmed` respond **422**. While it
+invites, `listed` responds **422**.
 
 ### GuestGroup methods
 

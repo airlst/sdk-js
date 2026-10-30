@@ -132,11 +132,12 @@ export const SubEvent = class {
   }
 
   /**
-   * Ends the planning of one sub-event (AIRLST-5842, plan before invitation). The API sets
-   * `invitations_sent_at` and moves every `planned` participation to `invited` on the
-   * queue (202). With `sendAutomatedEmail` true (the API default) and the sub-event's
-   * `send_status_emails` on, each row sends the email template hooked on `invited`. A
-   * second call is safe and reports `planned_count: 0`.
+   * Sends the invitations of one sub-event (AIRLST-5842). The API sets
+   * `default_assignment_status` to `invited`, sets `invitations_sent_at` on the first send,
+   * and moves every `listed` participation to `invited` on the queue (202). With
+   * `sendAutomatedEmail` true (the API default) and the sub-event's `send_status_emails` on,
+   * each row sends the email template hooked on `invited`. A second call is safe and reports
+   * `listed_count: 0`.
    */
   public async sendInvitations(
     subEventId: string,
@@ -161,7 +162,7 @@ export const SubEvent = class {
    * Writes one participation as the integrator (AIRLST-5842), mainly to cancel it:
    * `{ status: 'cancelled' }` keeps the row as `cancelled` and frees its seat, so the guest
    * can be re-added later. A move into a seat re-checks the quota and responds 422 while no
-   * seat is free; the planning rules apply. The parent status derives silently.
+   * seat is free; the listing rules apply. The parent status derives silently.
    */
   public async updateParticipation(
     subEventId: string,
