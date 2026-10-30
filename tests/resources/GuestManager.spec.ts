@@ -154,3 +154,436 @@ test('getAttachmentSignedUrl()', async () => {
     '/events/event-uuid/guests/guest-code/attachments/attachment-uuid/url',
   )
 })
+
+test('listSubEvents()', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [
+        {
+          id: 'sub-event-uuid',
+          name: 'Product Summit Europe',
+          starts_at: '2027-05-03T09:00:00.000000Z',
+          ends_at: '2027-05-03T17:00:00.000000Z',
+          registration_mode: 'invitation_only',
+          released_at: '2026-08-20T08:00:00.000000Z',
+          booked: 7,
+          limit: 20,
+          remaining: 13,
+          waitlisted: 3,
+          guest_group_limit: 40,
+          guest_group_used: 31,
+          guest_group_remaining: 9,
+          guest_group_waitlisted: 5,
+        },
+      ],
+    },
+  })
+
+  const subEvents = await guestManager.listSubEvents('guest-manager-uuid')
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events',
+  )
+  expect(subEvents).toHaveLength(1)
+  expect(subEvents[0].booked).toBe(7)
+  expect(subEvents[0].limit).toBe(20)
+  expect(subEvents[0].remaining).toBe(13)
+  // The queue a raised limit would drain, in FIFO order (AIRLST-5448).
+  expect(subEvents[0].waitlisted).toBe(3)
+  // The other contingent the manager books against: the row of its own guest group
+  // (AIRLST-5534). Counted across the whole group, not only this manager's guests.
+  expect(subEvents[0].guest_group_limit).toBe(40)
+  expect(subEvents[0].guest_group_used).toBe(31)
+  expect(subEvents[0].guest_group_remaining).toBe(9)
+  expect(subEvents[0].guest_group_waitlisted).toBe(5)
+})
+
+test('listSubEvents() reports an unlimited manager dimension', async () => {
+  // The manager owns no quota row on this sub-event — it reached the sub-event through
+  // its guest group, so its own limit and remaining are null while the group numbers
+  // carry the contingent. The usage is still reported (AIRLST-5446/AIRLST-5534).
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [
+        {
+          id: 'sub-event-uuid',
+          name: 'Service Summit Europe',
+          starts_at: '2027-05-04T09:00:00.000000Z',
+          ends_at: '2027-05-04T17:00:00.000000Z',
+          registration_mode: 'invitation_only',
+          released_at: '2026-08-20T08:00:00.000000Z',
+          booked: 2,
+          limit: null,
+          remaining: null,
+          guest_group_limit: 40,
+          guest_group_used: 12,
+          guest_group_remaining: 28,
+        },
+      ],
+    },
+  })
+
+  const subEvents = await guestManager.listSubEvents('guest-manager-uuid')
+
+  expect(subEvents[0].booked).toBe(2)
+  expect(subEvents[0].limit).toBeNull()
+  expect(subEvents[0].remaining).toBeNull()
+  expect(subEvents[0].guest_group_limit).toBe(40)
+  expect(subEvents[0].guest_group_remaining).toBe(28)
+})
+
+test('listSubEvents() reports no guest-group contingent for a manager without a group', async () => {
+  // The manager reached the sub-event through its own row, and books against the default
+  // row — whose numbers are not its business, so all three group fields stay null.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [
+        {
+          id: 'sub-event-uuid',
+          name: 'Factory Tour',
+          starts_at: '2027-05-05T09:00:00.000000Z',
+          ends_at: '2027-05-05T17:00:00.000000Z',
+          registration_mode: 'invitation_only',
+          released_at: '2026-08-20T08:00:00.000000Z',
+          booked: 1,
+          limit: 5,
+          remaining: 4,
+          guest_group_limit: null,
+          guest_group_used: null,
+          guest_group_remaining: null,
+        },
+      ],
+    },
+  })
+
+  const subEvents = await guestManager.listSubEvents('guest-manager-uuid')
+
+  expect(subEvents[0].limit).toBe(5)
+  expect(subEvents[0].guest_group_limit).toBeNull()
+  expect(subEvents[0].guest_group_used).toBeNull()
+  expect(subEvents[0].guest_group_remaining).toBeNull()
+})
+
+test('assignGuestSubEvents()', async () => {
+  guestManager.assignGuestSubEvents('guest-manager-uuid', 'guest-code', [
+    'sub-event-uuid-1',
+    'sub-event-uuid-2',
+  ])
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        sub_event_ids: ['sub-event-uuid-1', 'sub-event-uuid-2'],
+      }),
+    },
+  )
+})
+
+test('assignGuestSubEvents() with participation extended fields', async () => {
+  guestManager.assignGuestSubEvents(
+    'guest-manager-uuid',
+    'guest-code',
+    ['sub-event-uuid-1'],
+    { 'sub-event-uuid-1': { shirt_size: 'M' } },
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        sub_event_ids: ['sub-event-uuid-1'],
+        extended_fields: { 'sub-event-uuid-1': { shirt_size: 'M' } },
+      }),
+    },
+  )
+})
+
+test('assignGuestSubEvents() sends the all-or-nothing waitlist flag', async () => {
+  // AIRLST-5578, inherited from the admin request class the manager one extends.
+  guestManager.assignGuestSubEvents(
+    'guest-manager-uuid',
+    'guest-code',
+    ['sub-event-uuid-1', 'sub-event-uuid-2'],
+    undefined,
+    true,
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        sub_event_ids: ['sub-event-uuid-1', 'sub-event-uuid-2'],
+        waitlist_all_subevents_on_limit: true,
+      }),
+    },
+  )
+})
+
+test('assignGuestsSubEvents()', async () => {
+  guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1', 'guest-code-2'],
+    ['sub-event-uuid-1'],
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        guests: ['guest-code-1', 'guest-code-2'],
+        sub_event_ids: ['sub-event-uuid-1'],
+      }),
+    },
+  )
+})
+
+test('assignGuestsSubEvents() with participation extended fields', async () => {
+  guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1'],
+    ['sub-event-uuid-1'],
+    { 'sub-event-uuid-1': { shirt_size: 'M' } },
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        guests: ['guest-code-1'],
+        sub_event_ids: ['sub-event-uuid-1'],
+        extended_fields: { 'sub-event-uuid-1': { shirt_size: 'M' } },
+      }),
+    },
+  )
+})
+
+test('assignGuestsSubEvents() sends the all-or-nothing waitlist flag', async () => {
+  // AIRLST-5578, evaluated per guest by the API: one guest never waitlists another.
+  guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1', 'guest-code-2'],
+    ['sub-event-uuid-1', 'sub-event-uuid-2'],
+    undefined,
+    true,
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        guests: ['guest-code-1', 'guest-code-2'],
+        sub_event_ids: ['sub-event-uuid-1', 'sub-event-uuid-2'],
+        waitlist_all_subevents_on_limit: true,
+      }),
+    },
+  )
+})
+
+test('assignGuestsSubEvents() reports each guest on its own entry', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      results: [
+        {
+          guest_code: 'guest-code-1',
+          participations: [
+            {
+              id: 'participation-uuid',
+              sub_event_id: 'sub-event-uuid-1',
+              status: 'waitlisted',
+            },
+          ],
+          overlap_warnings: [],
+          error: null,
+        },
+        {
+          guest_code: 'guest-code-2',
+          participations: [],
+          overlap_warnings: [],
+          error: 'assignment blew up',
+        },
+      ],
+    },
+  })
+
+  const { data } = await guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1', 'guest-code-2'],
+    ['sub-event-uuid-1'],
+  )
+
+  expect(data.results[0].participations[0].status).toBe('waitlisted')
+  expect(data.results[0].error).toBeNull()
+  // One guest failing never hides the rest of the call.
+  expect(data.results[1].participations).toHaveLength(0)
+  expect(data.results[1].error).toBe('assignment blew up')
+})
+
+test('assignGuestSubEvents() returns waitlisted participations and overlap warnings', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participations: [
+        {
+          id: 'participation-uuid',
+          sub_event_id: 'sub-event-uuid-1',
+          status: 'waitlisted',
+        },
+      ],
+      overlap_warnings: [
+        { sub_event_ids: ['sub-event-uuid-1', 'sub-event-uuid-2'] },
+      ],
+    },
+  })
+
+  const { data } = await guestManager.assignGuestSubEvents(
+    'guest-manager-uuid',
+    'guest-code',
+    ['sub-event-uuid-1'],
+  )
+
+  expect(data.participations[0].status).toBe('waitlisted')
+  expect(data.overlap_warnings[0].sub_event_ids).toHaveLength(2)
+})
+
+test('cancelSubEventParticipation()', async () => {
+  guestManager.cancelSubEventParticipation(
+    'guest-manager-uuid',
+    'participation-uuid',
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/participations/participation-uuid',
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'cancelled' }),
+    },
+  )
+})
+
+test('promoteSubEventParticipation()', async () => {
+  guestManager.promoteSubEventParticipation(
+    'guest-manager-uuid',
+    'participation-uuid',
+    'confirmed',
+  )
+
+  expect(apiMock).toHaveBeenCalledTimes(1)
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/participations/participation-uuid/promote',
+    {
+      method: 'post',
+      body: JSON.stringify({ status: 'confirmed' }),
+    },
+  )
+})
+
+test('promoteSubEventParticipation() to listed while the sub-event is listing', async () => {
+  guestManager.promoteSubEventParticipation(
+    'guest-manager-uuid',
+    'participation-uuid',
+    'listed',
+  )
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/participations/participation-uuid/promote',
+    {
+      method: 'post',
+      body: JSON.stringify({ status: 'listed' }),
+    },
+  )
+})
+
+test('promoteSubEventParticipation() reports a skipped queue as a warning', async () => {
+  // AIRLST-5448: the manager may promote past guests who waited longer; the response says
+  // how many. A warning, never a block — and the promoted row leaves the waitlist.
+  apiMock.mockResolvedValueOnce({
+    data: {
+      participation: {
+        id: 'participation-uuid',
+        sub_event_id: 'sub-event-uuid',
+        status: 'confirmed',
+        waitlist_cause: null,
+        waitlist_cause_quota_id: null,
+        queue_position: null,
+      },
+      warnings: [
+        {
+          code: 'queue_skipped',
+          guests_waited_longer: 1,
+          message: 'One guest waited longer for this contingent.',
+        },
+      ],
+    },
+  })
+
+  const response = await guestManager.promoteSubEventParticipation(
+    'guest-manager-uuid',
+    'participation-uuid',
+    'confirmed',
+  )
+
+  expect(response.data.participation.waitlist_cause).toBeNull()
+  expect(response.data.warnings).toHaveLength(1)
+  expect(response.data.warnings[0].code).toBe('queue_skipped')
+  expect(response.data.warnings[0].guests_waited_longer).toBe(1)
+})
+
+test('assignGuestSubEvents() sends the mandatory flag', async () => {
+  guestManager.assignGuestSubEvents(
+    'guest-manager-uuid',
+    'guest-code',
+    ['sub-event-uuid-1'],
+    undefined,
+    undefined,
+    true,
+  )
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/guests/guest-code/sub-events',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        sub_event_ids: ['sub-event-uuid-1'],
+        mandatory: true,
+      }),
+    },
+  )
+})
+
+test('assignGuestsSubEvents() sends the mandatory flag', async () => {
+  guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1', 'guest-code-2'],
+    ['sub-event-uuid-1'],
+    undefined,
+    false,
+    true,
+  )
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/guest-managers/guest-manager-uuid/sub-events/assignments',
+    {
+      method: 'post',
+      body: JSON.stringify({
+        guests: ['guest-code-1', 'guest-code-2'],
+        sub_event_ids: ['sub-event-uuid-1'],
+        waitlist_all_subevents_on_limit: false,
+        mandatory: true,
+      }),
+    },
+  )
+})

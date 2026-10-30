@@ -1,11 +1,19 @@
 import { Api, PaginationInterface } from '../Api'
-import { GuestManagerInterface, AttachmentInterface } from '../interfaces'
+import {
+  GuestManagerInterface,
+  AttachmentInterface,
+  GuestManagerSubEventContingentInterface,
+  SubEventOverlapWarningInterface,
+  SubEventParticipationInterface,
+  SubEventPromotionWarningInterface,
+} from '../interfaces'
 import { QueryBuilder, QueryParameters } from '../utils/QueryBuilder'
 import {
   CreateMainBodyInterface,
   UpdateBodyInterface,
   CheckinBodyInterface,
   GetSignerUrlResponseInterface,
+  AssignSubEventsResponseInterface,
 } from './Guest'
 
 // Guest managers are created through POST /events/{event}/guests with the role
@@ -121,6 +129,173 @@ export const GuestManager = class {
       },
     )
   }
+
+  /**
+   * The contingent view of the guest-manager portal (AIRLST-5446/AIRLST-5534).
+   *
+   * Returns the sub-events of the parent event this manager can REACH, with its own
+   * quota state. A manager reaches a sub-event when BOTH hold: it is released, AND it
+   * carries an applicable quota row — a row for this manager, or a row for the manager's
+   * own guest group. The default row grants nothing; an exhausted row still grants
+   * access. Guest managers exist only on the parent event, so the manager is named by
+   * `guestManagerId`, and a manager of another event answers 404. Unreachable sub-events
+   * are absent; use `SubEvent.list()` for the full integrator view.
+   */
+  public async listSubEvents(
+    guestManagerId: string,
+  ): Promise<Array<GuestManagerSubEventContingentInterface>> {
+    const { data } = await Api.sendRequest(
+      `/events/${this.eventId}/guest-managers/${guestManagerId}/sub-events`,
+    )
+
+    return data.sub_events
+  }
+
+  /**
+   * Books one of this manager's guests onto released sub-events (AIRLST-5446).
+   *
+   * Same transaction, quota locks, waitlisting and response body as
+   * `Guest.assignSubEvents()`, plus the two guest-manager restrictions: the guest
+   * must be assigned to `guestManagerId` (403 otherwise), and every sub-event must
+   * be released (422 on the offending `sub_event_ids.{index}` key, and the whole
+   * batch is refused). An exhausted quota waitlists the participation; it is never
+   * a hard rejection.
+   *
+   * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) behaves exactly as on
+   * `Guest.assignSubEvents()`: when ANY requested sub-event has no free seat for this
+   * guest, EVERY participation of the call is created as `waitlisted`.
+   *
+   * `mandatory` (AIRLST-5842, default false) makes every participation of the call
+   * mandatory: `confirmed` without an RSVP (`listed` while the sub-event is listing),
+   * never waitlisted, also on a full quota, and the guest cannot answer it. A mandatory
+   * participation does not change the guest's status on the parent event.
+   */
+  public async assignGuestSubEvents(
+    guestManagerId: string,
+    code: string,
+    subEventIds: Array<string>,
+    extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
+    waitlistAllSubeventsOnLimit?: boolean,
+    mandatory?: boolean,
+  ): Promise<AssignSubEventsResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guest-managers/${guestManagerId}/guests/${code}/sub-events`,
+      {
+        method: 'post',
+        body: JSON.stringify({
+          sub_event_ids: subEventIds,
+          ...(extendedFields !== undefined && {
+            extended_fields: extendedFields,
+          }),
+          ...(waitlistAllSubeventsOnLimit !== undefined && {
+            waitlist_all_subevents_on_limit: waitlistAllSubeventsOnLimit,
+          }),
+          ...(mandatory !== undefined && { mandatory }),
+        }),
+      },
+    )
+  }
+
+  /**
+   * Books MANY of this manager's guests onto the same released sub-events (AIRLST-5446).
+   *
+   * The bulk sibling of `assignGuestSubEvents()`, bounded at 200 guests per call so it
+   * can answer synchronously with a per-guest result. Isolation is per guest: each one
+   * is assigned in its own transaction, so a guest that fails carries its own `error`
+   * while the rest of the call still books. A guest that already participates in a
+   * requested sub-event is skipped rather than rejected, which is what makes a
+   * pre-assignment safe to run twice. Every entry carries the same
+   * `participations` / `overlap_warnings` pair as the single-guest method, so one
+   * parser serves both. Results come back in the order the codes were posted.
+   *
+   * Bulk assignment exists on the guest-manager surface only — an integrator key uses
+   * `Guest.assignSubEvents()` one guest at a time, because a bulk route outside this
+   * surface would skip the manager-ownership and released-sub-event rules.
+   *
+   * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) is evaluated PER GUEST,
+   * inside that guest's own transaction: a guest whose batch meets an exhausted quota is
+   * waitlisted on all of its sub-events, while the rest of the call still books normally.
+   *
+   * `mandatory` (AIRLST-5842, default false) makes every participation of the call
+   * mandatory: `confirmed` without an RSVP (`listed` while the sub-event is listing),
+   * never waitlisted, also on a full quota, and the guest cannot answer it. A mandatory
+   * participation does not change the guest's status on the parent event.
+   */
+  public async assignGuestsSubEvents(
+    guestManagerId: string,
+    codes: Array<string>,
+    subEventIds: Array<string>,
+    extendedFields?: { [subEventId: string]: { [fieldKey: string]: unknown } },
+    waitlistAllSubeventsOnLimit?: boolean,
+    mandatory?: boolean,
+  ): Promise<BulkAssignSubEventsResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guest-managers/${guestManagerId}/sub-events/assignments`,
+      {
+        method: 'post',
+        body: JSON.stringify({
+          guests: codes,
+          sub_event_ids: subEventIds,
+          ...(extendedFields !== undefined && {
+            extended_fields: extendedFields,
+          }),
+          ...(waitlistAllSubeventsOnLimit !== undefined && {
+            waitlist_all_subevents_on_limit: waitlistAllSubeventsOnLimit,
+          }),
+          ...(mandatory !== undefined && { mandatory }),
+        }),
+      },
+    )
+  }
+
+  /**
+   * Cancels a participation of one of the manager's own guests (AIRLST-5842). The row stays
+   * as `cancelled` and its seat is freed. A guest of another manager responds 403, a
+   * sub-event out of the manager's reach 422. Silent: no email.
+   */
+  public async cancelSubEventParticipation(
+    guestManagerId: string,
+    participationId: string,
+  ): Promise<CancelSubEventParticipationResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guest-managers/${guestManagerId}/participations/${participationId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'cancelled' }),
+      },
+    )
+  }
+
+  /**
+   * Promotes a waitlisted participation once a seat frees up (AIRLST-5446).
+   *
+   * Manual promotion is the guest manager's step. The participation must be
+   * `waitlisted`, its sub-event released, and its guest assigned to
+   * `guestManagerId`. Every applicable quota row is re-checked under locks, so the
+   * promotion is refused with 422 while no seat is actually free.
+   *
+   * `data.warnings` (AIRLST-5448) is empty when the guest was first in the FIFO queue of
+   * their contingent; otherwise one `queue_skipped` entry says how many guests waited
+   * longer — a warning only, the promotion is never blocked. The promoted row has left the
+   * waitlist, so its `waitlist_cause` and `queue_position` read null.
+   *
+   * While the sub-event lists new assignments (AIRLST-5842, `default_assignment_status`
+   * `listed`), the only target status is `listed`; `invited` and `confirmed` respond 422.
+   * While it invites, `listed` responds 422.
+   */
+  public async promoteSubEventParticipation(
+    guestManagerId: string,
+    participationId: string,
+    status: 'listed' | 'invited' | 'confirmed',
+  ): Promise<PromoteSubEventParticipationResponseInterface> {
+    return await Api.sendRequest(
+      `/events/${this.eventId}/guest-managers/${guestManagerId}/participations/${participationId}/promote`,
+      {
+        method: 'post',
+        body: JSON.stringify({ status }),
+      },
+    )
+  }
 }
 
 interface GuestManagerListResponseInterface {
@@ -171,5 +346,41 @@ interface CreateResponseInterface {
 interface UpdateResponseInterface {
   data: {
     guest: GuestManagerInterface
+  }
+}
+
+/**
+ * One guest's outcome in a bulk assignment. `error` is null when the guest was booked;
+ * an empty `participations` array with a null `error` means the guest already
+ * participated in every requested sub-event. A failure carries a stable, localized
+ * message — never the underlying exception text — and is reported server-side.
+ */
+export interface BulkAssignSubEventsResultInterface {
+  guest_code: string
+  participations: Array<SubEventParticipationInterface>
+  overlap_warnings: Array<SubEventOverlapWarningInterface>
+  error: string | null
+}
+
+export interface BulkAssignSubEventsResponseInterface {
+  data: {
+    results: Array<BulkAssignSubEventsResultInterface>
+  }
+}
+
+interface CancelSubEventParticipationResponseInterface {
+  data: {
+    participation: SubEventParticipationInterface
+  }
+}
+
+interface PromoteSubEventParticipationResponseInterface {
+  data: {
+    participation: SubEventParticipationInterface
+    /**
+     * Empty when the guest was first in their queue; one `queue_skipped` entry otherwise
+     * (AIRLST-5448).
+     */
+    warnings: Array<SubEventPromotionWarningInterface>
   }
 }

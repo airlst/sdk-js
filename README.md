@@ -40,6 +40,236 @@ import { Event } from '@airlst/sdk'
 const { data } = await new Event().get('event-uuid')
 ```
 
+Every event object also reports its sub-event state (AIRLST-5445): `is_parent` (boolean) and
+`sub_events_count` (integer).
+
+#### List sub-events of an event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvents = await new SubEvent('event-uuid').list()
+```
+
+Each sub-event carries its quota state: `participations_count` counts occupying participations
+(statuses `invited` and `confirmed`), and each entry in `quotas` reports `limit` and `used`. A
+quota row comes in one of three shapes (AIRLST-5446): a guest-group row (`guest_group_id` set),
+a guest-manager row (`guest_manager_id` set — it limits the guests assigned to that manager, on
+top of their group/default row), or the default quota (both null) — it covers guests whose group
+has no dedicated quota row and guests without a group. A quota tied to a guest group also
+carries `guest_group_name` as a locale-keyed object (`{ 'en-GB': 'VIP' }`); a guest-manager row
+carries `guest_manager_name` as a plain string. Because a guest occupies a seat in every
+applicable row, the sum of `used` across rows can exceed `participations_count`.
+
+Each sub-event also reports `released_at` (AIRLST-5446): the moment it was released for
+guest-manager booking, or `null` while it is unreleased. It is independent of
+`registration_mode`, the guest-facing invitation-only vs open switch. `send_status_emails`
+(AIRLST-5447) is the per-SubEvent auto-send switch: while it is `false` (the default), real
+participation status transitions send no per-SubEvent email templates. To assign guests, use
+`Guest.assignSubEvents()` (see the Guest methods).
+
+`response_deadline_at` (AIRLST-5842) is the moment after which a guest can no longer confirm,
+promote or self-book; a decline stays possible, and `null` means no deadline. `reminder_at` is
+the moment the `subEventResponseReminderDue` workflow trigger fires once for every guest whose
+participation is still `invited`; `reminder_sent_at` records when it fired. Customers configure
+the reminder email as a workflow. Every real participation status change also fires the
+`subEventParticipationStatusChanged` workflow trigger, so a workflow with an HTTP request action
+works as a webhook.
+
+`SubEvent.list()` is the **full integrator view**: it returns released and unreleased
+sub-events alike, and `released_at` is what tells them apart. A guest-manager-facing consumer
+must not read it — use `GuestManager.listSubEvents()` instead, which returns only the sub-events
+the acting manager can reach (released AND covered by a quota row for the manager or its guest
+group) and reports that manager's own contingent.
+
+Each sub-event also carries a stable integration `key` and its descriptive content
+(AIRLST-5842): `category`, `teaser`, `description`, `venue`, `contact_name`, `contact_email`,
+`contact_phone`, `language` and `dress_code`. All are nullable and hold one language.
+`list({ key })` returns only the live sub-event with that key: zero or one sub-event.
+
+```javascript
+const [sideEvent] = await new SubEvent('event-uuid').list({ key: 'deep-dive' })
+```
+
+#### Create and update a sub-event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvent = await new SubEvent('event-uuid').create({
+  name: 'Deep Dive: Batteries',
+  starts_at: '2027-05-03T09:00:00+02:00',
+  ends_at: '2027-05-03T11:00:00+02:00',
+  key: 'deep-dive',
+  category: 'side_event',
+  released: true,
+  quotas: [
+    { guest_group_id: 'market-a-uuid', limit: 12 },
+    { guest_group_id: 'market-b-uuid', limit: 8 },
+  ],
+})
+
+await new SubEvent('event-uuid').update(subEvent.id, { venue: 'Hall 4', teaser: null })
+```
+
+`create()` requires `name`, `starts_at` and `ends_at` (AIRLST-5842). A `key` that a live
+sub-event of the same event already uses responds 422; a deleted sub-event frees its key.
+`released: true` releases the sub-event for guest-manager booking. `quotas` writes the quota
+matrix in the same transaction: a row has a `guest_group_id`, a `guest_manager_id`, or neither
+(the default row), and its guest group or guest manager must belong to the event. `update()` is
+a partial update: only the submitted fields change, and `null` clears a content field. It does
+not take `quotas`. Both accept `response_deadline_at` and `reminder_at`; a reminder after the
+deadline responds 422. Both accept `capacity` (AIRLST-5842): the overall seat count on top of
+the quota matrix, `null` for no cap; a full capacity waitlists with cause `capacity`. Both
+resolve to the sub-event with its quota state, in the shape of `list()`. Timestamps take an ISO 8601 offset; the API stores the UTC instant.
+
+#### Extended fields on a sub-event
+
+The event defines its `subEventDetails` extended fields in the Suite (SubEvents → Fields),
+for example a format, an address or the expected participants (AIRLST-5842). Every sub-event
+carries their values in `extended_fields`, keyed by field key, and an empty object without
+values. `create()` and `update()` take `extended_fields`. An unknown key responds **422**, and
+so does a value that its definition refuses. `update()` merges the values into the stored
+ones; a key with `null` clears that one value.
+
+```javascript
+await new SubEvent('event-uuid').update('sub-event-uuid', {
+  extended_fields: { format: 'hybrid', expected_participants: 40 },
+})
+```
+
+#### Write the quota matrix of a sub-event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvent = await new SubEvent('event-uuid').syncQuotas('sub-event-uuid', [
+  { guest_group_id: 'market-a-uuid', limit: 12 },
+  { guest_group_id: 'market-b-uuid', limit: 8 },
+  { guest_manager_id: 'spoc-uuid', limit: 5 },
+  { limit: 0 },
+])
+```
+
+`syncQuotas()` replaces the complete matrix (AIRLST-5842), exactly like the Suite quota modal.
+One sub-event can have rows for several guest groups: each row is the seat share of that market.
+A row has a `guest_group_id`, a `guest_manager_id`, or neither (the default row), never both, and
+the matrix holds at most one row per dimension. Guest groups and guest managers must belong to
+the event. A kept row keeps its `id`; an empty array clears the matrix. It resolves to the
+sub-event with the quota state of every row.
+
+A quota row has no `mandatory` flag (removed in AIRLST-5842 F2; the API responds **422**). The
+automatic assignment of a market is the sub-event's assignment rule, see below.
+
+#### Assignment rule of a sub-event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+await new SubEvent('event-uuid').update('sub-event-uuid', {
+  assignment_mode: 'mandatory', // or 'invite'
+  assignment_rule: {
+    type: 'group',
+    logicalOperator: 'and',
+    items: [
+      { type: 'item', operand: 'guest.guest_group_id', operator: 'equal', data_type: 'uuid', matching_value: 'market-uk-uuid' },
+      { type: 'item', operand: 'guest.extended_fields->summit', operator: 'equal', data_type: 'string', matching_value: 'partner' },
+    ],
+  },
+})
+```
+
+One rule per sub-event (AIRLST-5842 F2) assigns every guest it selects, also guests who match
+later: `mandatory` as a confirmed mandatory participation, `invite` as an ordinary invitation,
+both `listed` while the sub-event lists. Items are guest fields (`guest.status`,
+`guest.guest_group_id`, `guest.extended_fields->KEY`, `booking.extended_fields->KEY`,
+`contact.*`) with `equal`, `not_equal`, `empty` or `not_empty`; groups nest with `and`/`or`. A
+rule needs at least one condition and every comparison a value (**422** otherwise). The rule
+never re-adds a cancelled or declined guest and leaves manual participations alone. A guest who
+no longer matches keeps the participation, which reports `rule_mismatch_at`; rows the rule
+created report `assigned_by_rule_at`. Send both fields as `null` to remove the rule.
+
+Each sub-event also reports `image_url` (AIRLST-5842), `null` without an image.
+
+#### Set or remove the image of a sub-event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvent = await new SubEvent('event-uuid').uploadImage(
+  'sub-event-uuid',
+  file, // a Blob or File: JPEG, PNG or WebP, at most 5 MB
+  'tour.jpg',
+)
+
+await new SubEvent('event-uuid').deleteImage('sub-event-uuid')
+```
+
+A new upload replaces the old image. Both methods return the sub-event in the shape of
+`list()`. A file of another type or above 5 MB responds **422**.
+
+#### Plan a sub-event before the invitation
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const subEvents = new SubEvent('event-uuid')
+
+const sideEvent = await subEvents.create({
+  name: 'Deep Dive: Batteries',
+  starts_at: '2027-05-03T09:00:00+02:00',
+  ends_at: '2027-05-03T11:00:00+02:00',
+  default_assignment_status: 'listed',
+})
+
+// …assign guests: the rows are `listed`, nobody is told yet…
+
+const { listed_count } = await subEvents.sendInvitations(sideEvent.id)
+
+// Later: list a second wave, then send again.
+await subEvents.update(sideEvent.id, { default_assignment_status: 'listed' })
+```
+
+`default_assignment_status` (AIRLST-5842) is the status of a new assignment: `listed` or
+`invited` (the default). While it is `listed`, every assignment creates a `listed`
+participation, or a `waitlisted` one when the quota is full. A `listed` row takes a
+seat (`participations_count`, `used` and `booked` count it), sends no email and does not change
+the guest's status on the parent event. A guest never sees a `listed` row: the guest endpoints
+leave the sub-event out for that guest, and they leave it out for every guest until the first
+send (`invitations_sent_at` is `null`). A guest booking is never `listed`.
+
+`sendInvitations()` sets `default_assignment_status` to `invited`, sets `invitations_sent_at`
+on the first send, responds 202 with `listed_count`, and moves every `listed` row to `invited`
+on the queue. Pass `false` as the second argument to send no email; by default each row sends
+the email template hooked on `invited` when the sub-event's `send_status_emails` is on. A
+second call is safe and reports `listed_count: 0`. After it, new assignments are `invited`.
+To list a next wave, set `default_assignment_status` back to `listed` with `update()` and send
+again. `update()` with `invited` responds **422** while `invitations_sent_at` is `null`.
+
+The status `listed` was `planned`, and `default_assignment_status` replaced
+`plan_before_invitation` (AIRLST-5842 F3). The API no longer accepts the old names.
+
+#### Cancel or update a participation as the integrator
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+const { data } = await new SubEvent('event-uuid').updateParticipation(
+  'sub-event-uuid',
+  'participation-uuid',
+  { status: 'cancelled' },
+)
+
+data.participation.status // 'cancelled'
+data.guest.status // the guest's status on the PARENT event, after the write
+```
+
+The integrator write (AIRLST-5842) takes any participation `status` and `extended_fields`. A
+cancel keeps the row as `cancelled` and frees its seat, so the guest can be re-added later. A
+move into a seat re-checks the quota and responds **422** while no seat is free, and the
+listing rules apply. `send_automated_email` (default `false`) gates the per-sub-event status
+email. A participation of another sub-event responds **404**.
+
 #### Get temporary signed url to upload file directly to cloud storage
 
 ```javascript
@@ -81,6 +311,7 @@ Method accepts following parameters:
 | `sorts.*.field`      | `string` | Sort field                                                                                                                                                                                                                                   |
 | `sorts.*.direction`  | `string` | Sort field direction. One of: `asc` (ascending), `desc` (descending)                                                                                                                                                                         |
 | `sorts.*.order`      | `number` | Sort field order. Optional. Defines order/priority of the sort when sorting by multiple fields                                                                                                                                               |
+| `includeSubEventParticipations` | `boolean` | Optional. Adds `sub_event_participations` to every guest of the page, in the same shape as `get()` (AIRLST-5842). Only takes effect while the company's `sub-events` module is active; the key is absent otherwise. |
 
 #### Validate guest code
 
@@ -97,6 +328,179 @@ import { Guest } from '@airlst/sdk'
 
 const { data } = await new Guest('event-uuid').get('guest-code')
 ```
+
+When the company's `sub-events` module is active, the guest object also carries
+`sub_event_participations` (AIRLST-5445): the guest's sub-event participations with their
+per-sub-event `status` (`listed`, `invited`, `confirmed`, `declined`, `cancelled` or
+`waitlisted`; `listed` while the sub-event lists new assignments, AIRLST-5842).
+The key is absent while the module is off.
+
+Every participation object — here and on every sub-event endpoint below — also reports why it
+is waitlisted (AIRLST-5448). `waitlist_cause` is `guest_group`, `guest_manager` or `default`
+when that quota row refused the seat (`waitlist_cause_quota_id` names the row),
+`all_or_nothing` when another sub-event of the same batch was full, `manual` when an operator
+waitlisted the guest explicitly, and `null` on a row that is not waitlisted — or on one
+waitlisted before the cause was recorded, which reads as "unknown". `queue_position` is the
+guest's 1-based place in the FIFO queue of that contingent (ordered by `created_at`, then
+`id`; one queue per quota row, the `all_or_nothing` rows of a sub-event among themselves) and
+`null` when the row has no queue.
+
+#### Assign a guest to sub-events
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').assignSubEvents(
+  'guest-code',
+  ['sub-event-uuid-1', 'sub-event-uuid-2'],
+  { 'sub-event-uuid-1': { shirt_size: 'M' } },
+)
+```
+
+The assignment is one transaction (AIRLST-5445): a full sub-event yields a `waitlisted`
+participation instead of `invited`, and any error rolls back the whole batch. The response
+reports the created participations with their per-sub-event `status`. Requires the company's
+`sub-events` module; a sub-event of another event, or one the guest already participates in,
+responds 422.
+
+The optional third argument (AIRLST-5446) carries participation extended-field values, keyed
+by sub-event UUID. Only sub-events listed in the assignment are accepted, and each value
+object is validated against that sub-event's own field definitions — unknown keys respond 422.
+
+The optional fourth argument `waitlistAllSubeventsOnLimit` (AIRLST-5578, default `false`) turns
+the per-sub-event decision into an all-or-nothing one: when **any** requested sub-event has no
+free seat for this guest, **every** participation of the call is created as `waitlisted` instead
+of only the exhausted one. The trigger is the quota verdict, whichever applicable row produced
+it — the guest's group row, a guest-manager row, or the default row. A waitlisted participation
+occupies no seat, so the free sub-events keep theirs and the guest can be promoted one
+participation at a time later. Pass `undefined` for the extended fields to use it on its own.
+
+The optional fifth argument `mandatory` (AIRLST-5842, default `false`) makes every participation
+of the call mandatory: `confirmed` without an RSVP (`listed` while the sub-event is
+listing), never waitlisted, also on a full quota. Each participation reports `is_mandatory`.
+The guest cannot answer a mandatory participation: `updateSubEventParticipation()` responds
+**422**. A mandatory participation does not change the guest's status on the parent event.
+
+The response also carries `overlap_warnings` (AIRLST-5446): groups of the guest's sub-events
+that overlap in time, limited to groups the just-created participations touch. It is a warning
+only — the API never blocks an assignment because of an overlap.
+
+The assignment also derives the guest's status on the parent event, silently — an assignment
+never sends a status email (AIRLST-5447). That derived status is subject to the parent event's
+guest limit, so a call that used to answer 201 can now answer 422 on `limits`, in which case
+nothing is written. The response does not report the derived status: a fresh assignment derives
+`invited`, which tells the caller nothing new. Read the parent status from
+`updateSubEventParticipation()` once the guest answers.
+
+#### List sub-events in the context of one guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const subEvents = await new Guest('event-uuid').listSubEvents('guest-code')
+```
+
+The registration-form read (AIRLST-5447, R40): every sub-event of the event, sorted by start
+date, with the guest's own `participation` (`null` while the guest is not assigned) and a
+guest-specific `has_free_seat`. Quota rows are scoped to guest groups and guest managers, so
+whether a sub-event is "full" depends on the guest — `has_free_seat: false` means a confirm or
+a new assignment for THIS guest would be waitlisted, and the form should say so before the
+guest answers. Each sub-event also reports `response_deadline_at` (AIRLST-5842): after it the
+guest can no longer confirm, but can still decline.
+
+#### Accept or decline one participation as the guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').updateSubEventParticipation(
+  'guest-code',
+  'participation-uuid',
+  'confirmed',
+)
+
+data.participation.status // 'confirmed'
+data.guest.status // the guest's status on the PARENT event, after the answer
+```
+
+The guest RSVP (AIRLST-5447): a guest only ever answers `confirmed` or `declined`. A confirm
+from the waitlist re-checks every applicable quota row under locks and responds 422 while no
+seat is actually free — the guest stays waitlisted. While the guest is cancelled on the parent
+event, a confirm responds 422 (reactivate the guest on the parent event first). After the
+sub-event's `response_deadline_at` a confirm responds 422 too (AIRLST-5842). A decline is
+always allowed, also after the deadline. A participation of another guest responds 404.
+
+The answer also derives the guest's status on the parent event, in the same transaction, and
+reports it as `data.guest.status`: one confirmed participation makes the guest `confirmed`;
+while any participation is still `invited` or `waitlisted` the guest is `invited`; once every
+participation is `declined` or `cancelled` the guest is `cancelled`. A guest held at `listed`
+or `requested` is not moved to `invited`, and a guest in the payment-owned `unpaid` or
+`checkout` states is not moved at all — so read the field rather than assuming one of the
+three derived values. When the parent event's guest limit no longer fits the derived status
+the whole call responds 422 and nothing is written. The assign endpoints do not return this
+field: at assign time the derived value carries no information.
+
+The optional fourth argument `sendAutomatedEmail` (default true) gates the per-SubEvent status
+email together with the sub-event's own `send_status_emails` switch.
+
+A mandatory participation (`is_mandatory: true`, AIRLST-5842) is not the guest's to answer:
+confirm and decline both respond **422** on `status`.
+
+#### Promote a waitlisted participation as the guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').promoteSubEventParticipation(
+  'guest-code',
+  'participation-uuid',
+  'confirmed',
+)
+
+data.participation.status // 'confirmed'
+data.guest.status // the guest's status on the PARENT event, after the promotion
+data.warnings // [] when the guest was first in line
+```
+
+The key-authed guest promote (AIRLST-5407, ACP-30143) — the "book seat" action of a portal that
+authenticates with the event API key. Only a `waitlisted` participation can be promoted, into
+`invited` or `confirmed`. Every applicable quota row is re-checked under locks, so the call
+responds **422** while no seat is actually free, and also after the sub-event's
+`response_deadline_at` (AIRLST-5842); a participation of another guest responds **404**. The write derives the guest's status on the parent event silently, with the same rules
+as `updateSubEventParticipation()`, and reports it as `data.guest.status`.
+
+`data.warnings` (AIRLST-5448) is empty when the guest was first in the FIFO queue of their
+contingent. Otherwise it carries one entry `{ code: 'queue_skipped', guests_waited_longer,
+message }` — how many guests of the same contingent had waited longer, with a translated
+message. A warning only: the promotion is never blocked by the queue. The promoted row has left
+the waitlist, so its `waitlist_cause` and `queue_position` read `null`.
+
+#### Book an open sub-event as the guest
+
+```javascript
+import { Guest } from '@airlst/sdk'
+
+const { data } = await new Guest('event-uuid').bookSubEvent(
+  'guest-code',
+  'sub-event-uuid',
+  { send_automated_email: true }, // optional: extended_fields, send_automated_email
+)
+
+data.participation.status // 'confirmed', or 'waitlisted' when no seat was free
+data.participation.waitlist_cause // 'capacity' when the overall capacity was full
+data.guest.status // the guest's status on the PARENT event, after the booking
+```
+
+First come, first served (AIRLST-5842): the guest books one sub-event whose
+`registration_mode` is `open`. While a seat is free the guest is `confirmed` at once; when a
+quota row or the sub-event's `capacity` is full, the guest is `waitlisted`, and
+`waitlist_cause` names the quota row's kind or `capacity`. An `invitation_only` sub-event, a
+passed `response_deadline_at`, an active participation (answer it with
+`updateSubEventParticipation()`) and a guest who is cancelled or declined on the parent event
+respond **422**. A sub-event whose first invitations are not sent, one where the guest's own row is `listed`,
+or one of another event responds **404**. A `cancelled` or
+`declined` participation is booked again. `send_automated_email` (default `true`) gates the
+per-sub-event email of `confirmed`.
 
 #### Create a new guest
 
@@ -284,6 +688,116 @@ const { data } = await new GuestManager('event-uuid').checkin('guest-manager-cod
 // And all other methods: createCompanion, archive, restore, delete, createRecommendation, getAttachments, getAttachmentSignedUrl
 ```
 
+#### List the sub-events a guest manager can book
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const subEvents = await new GuestManager('event-uuid').listSubEvents('guest-manager-uuid')
+```
+
+The contingent view of the guest-manager portal (AIRLST-5446/AIRLST-5534). Guest managers exist
+only on the parent event, so the manager is named by its UUID and a manager of another event
+answers 404.
+
+A manager **reaches** a sub-event when BOTH hold: it is released, AND it carries an applicable
+quota row — a row for this manager, or a row for the manager's own guest group. The **default**
+row grants nothing: it is the fallback that catches everyone, so a released sub-event carrying
+only a default row does not appear. An **exhausted** row still grants access — a full contingent
+waitlists a booking, it does not hide the sub-event. Unreachable sub-events are absent; use
+`SubEvent.list()` for the full integrator view.
+
+Each entry reports `booked` — the occupying participations (`invited` and `confirmed`) of this
+manager's guests — plus `limit` and `remaining` from the manager's own quota row. `limit` and
+`remaining` are `null` when the manager has no row of its own: the manager dimension is then
+unlimited, and the manager reached the sub-event through its guest group.
+
+`guest_group_limit`, `guest_group_used` and `guest_group_remaining` report the row of the
+manager's **own guest group** — the other contingent it books against. All three are `null` when
+the manager has no guest group, or when its group owns no row on this sub-event (the manager then
+books against the default row, whose numbers are not its business). `guest_group_used` counts
+every guest of that group, not only the ones this manager brought.
+
+Neither `remaining` nor `guest_group_remaining` goes below 0. Quota rows themselves — of guest
+groups, of the default dimension and of other managers — are never exposed here. Requires the
+company's `sub-events` module.
+
+`waitlisted` and `guest_group_waitlisted` (AIRLST-5448) count the guests queued on the manager's
+own row and on its group row — the queues a raised limit would drain, in FIFO order. They are
+`null` exactly when `limit` and `guest_group_limit` are `null`.
+
+#### Book a guest onto sub-events as a guest manager
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const { data } = await new GuestManager('event-uuid').assignGuestSubEvents(
+  'guest-manager-uuid',
+  'guest-code',
+  ['sub-event-uuid-1', 'sub-event-uuid-2'],
+  { 'sub-event-uuid-1': { shirt_size: 'M' } },
+)
+```
+
+Same transaction, quota locks, waitlisting and response body as `Guest.assignSubEvents()`, plus
+the two guest-manager restrictions (AIRLST-5446). The guest must be assigned to that manager —
+a guest of another manager responds **403**, and that check runs before validation, so nothing
+about the posted sub-events is disclosed. Every sub-event must be released — an unreleased one
+responds **422** on the offending `sub_event_ids.{index}` key and the whole batch is refused.
+An exhausted quota yields a `waitlisted` participation; it is never a hard rejection.
+
+The optional fifth argument `waitlistAllSubeventsOnLimit` (AIRLST-5578, default `false`) behaves
+exactly as on `Guest.assignSubEvents()`. `assignGuestsSubEvents()` takes it too, as its own fifth
+argument, and the API evaluates it **per guest**: a guest whose batch meets an exhausted quota is
+waitlisted on all of its sub-events, while the rest of the call still books normally.
+
+Both methods take `mandatory` (AIRLST-5842) as their sixth argument, with the same meaning as on
+`Guest.assignSubEvents()`.
+
+#### Cancel a participation as a guest manager
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const { data } = await new GuestManager('event-uuid').cancelSubEventParticipation(
+  'guest-manager-uuid',
+  'participation-uuid',
+)
+
+data.participation.status // 'cancelled'
+```
+
+A guest manager cancels a participation of its own guest (AIRLST-5842). The row stays as
+`cancelled` and its seat is freed. A guest of another manager responds **403**, a sub-event
+out of the manager's reach **422**. The cancel sends no email.
+
+#### Promote a waitlisted participation as a guest manager
+
+```javascript
+import { GuestManager } from '@airlst/sdk'
+
+const { data } = await new GuestManager('event-uuid').promoteSubEventParticipation(
+  'guest-manager-uuid',
+  'participation-uuid',
+  'confirmed',
+)
+```
+
+Manual promotion is the guest manager's step (AIRLST-5446); automatic FIFO promotion is a later
+milestone. The participation must be `waitlisted`, its sub-event released, and its guest assigned
+to that manager. Every applicable quota row is re-checked under locks, so the promotion responds
+**422** while no seat is actually free.
+
+`data.warnings` (AIRLST-5448) is empty when the guest was first in the FIFO queue of their
+contingent. Otherwise it carries one entry `{ code: 'queue_skipped', guests_waited_longer,
+message }` — how many guests of the same contingent had waited longer, with a translated
+message. A warning only: the promotion is never blocked by the queue. The promoted row has left
+the waitlist, so its `waitlist_cause` and `queue_position` read `null`.
+
+While the sub-event lists new assignments (AIRLST-5842, `default_assignment_status: listed`),
+the only target status is `listed`; `invited` and `confirmed` respond **422**. While it
+invites, `listed` responds **422**.
+
 ### GuestGroup methods
 
 #### List all guest groups
@@ -306,6 +820,11 @@ import { EmailTemplate } from '@airlst/sdk'
 
 const { data } = await new EmailTemplate('event-uuid').list()
 ```
+
+Each template reports its send trigger: `booking_status_hook` (a parent booking status), or —
+mutually exclusive with it — the per-SubEvent pair `sub_event_id` + `sub_event_status_hook`
+(AIRLST-5447). A per-SubEvent template sends on a real participation status transition into
+the hooked status, and only while the sub-event's `send_status_emails` switch is on.
 
 #### Send email template to selected guests
 
