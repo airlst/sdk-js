@@ -123,6 +123,21 @@ deadline responds 422. Both accept `capacity` (AIRLST-5842): the overall seat co
 the quota matrix, `null` for no cap; a full capacity waitlists with cause `capacity`. Both
 resolve to the sub-event with its quota state, in the shape of `list()`. Timestamps take an ISO 8601 offset; the API stores the UTC instant.
 
+#### Extended fields on a sub-event
+
+The event defines its `subEventDetails` extended fields in the Suite (SubEvents → Fields),
+for example a format, an address or the expected participants (AIRLST-5842). Every sub-event
+carries their values in `extended_fields`, keyed by field key, and an empty object without
+values. `create()` and `update()` take `extended_fields`. An unknown key responds **422**, and
+so does a value that its definition refuses. `update()` merges the values into the stored
+ones; a key with `null` clears that one value.
+
+```javascript
+await new SubEvent('event-uuid').update('sub-event-uuid', {
+  extended_fields: { format: 'hybrid', expected_participants: 40 },
+})
+```
+
 #### Write the quota matrix of a sub-event
 
 ```javascript

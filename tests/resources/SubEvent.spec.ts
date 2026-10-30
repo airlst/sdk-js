@@ -396,3 +396,37 @@ test('syncQuotas() sends a mandatory guest-group row', async () => {
   )
   expect(synced.quotas[0].mandatory).toBe(true)
 })
+
+test('create() and update() send the sub-event extended fields', async () => {
+  apiMock.mockResolvedValue({
+    data: {
+      sub_event: {
+        id: 'sub-event-uuid',
+        extended_fields: { format: 'hybrid', expected_participants: 40 },
+      },
+    },
+  })
+
+  const created = await subEvent.create({
+    name: 'Deep Dive',
+    starts_at: '2027-05-03T09:00:00+02:00',
+    ends_at: '2027-05-03T11:00:00+02:00',
+    extended_fields: { format: 'hybrid', expected_participants: 40 },
+  })
+
+  expect(created.extended_fields.format).toBe('hybrid')
+
+  await subEvent.update('sub-event-uuid', {
+    extended_fields: { expected_participants: null },
+  })
+
+  expect(apiMock).toHaveBeenLastCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid',
+    {
+      method: 'patch',
+      body: JSON.stringify({
+        extended_fields: { expected_participants: null },
+      }),
+    },
+  )
+})

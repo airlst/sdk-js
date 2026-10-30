@@ -99,6 +99,11 @@ export interface SubEventInterface extends SubEventContentInterface {
    */
   image_url: string | null
   /**
+   * The values of the event's `subEventDetails` extended fields (AIRLST-5842), keyed by
+   * field key. An empty object without values. An option field holds its option key.
+   */
+  extended_fields: Record<string, unknown>
+  /**
    * The overall seat count across all guests, on top of the quota matrix (AIRLST-5842).
    * Once the occupying participations reach it, every further assignment or booking is
    * waitlisted with cause `capacity`. Null: no overall cap.
@@ -142,6 +147,11 @@ export interface GuestSubEventInterface {
    * The URL of the sub-event image (AIRLST-5842); null without one.
    */
   image_url: string | null
+  /**
+   * The values of the event's `subEventDetails` extended fields (AIRLST-5842), keyed by
+   * field key. An empty object without values. An option field holds its option key.
+   */
+  extended_fields: Record<string, unknown>
   participation: SubEventParticipationInterface | null
   has_free_seat: boolean
 }
@@ -174,6 +184,11 @@ export interface GuestManagerSubEventContingentInterface
    * The URL of the sub-event image (AIRLST-5842); null without one.
    */
   image_url: string | null
+  /**
+   * The values of the event's `subEventDetails` extended fields (AIRLST-5842), keyed by
+   * field key. An empty object without values. An option field holds its option key.
+   */
+  extended_fields: Record<string, unknown>
   /**
    * Occupying participations — statuses `planned`, `invited` and `confirmed` — of THIS
    * manager's guests. Always reported, also when the manager has no quota row.
@@ -284,6 +299,12 @@ export interface SubEventQuotaBodyInterface {
 export interface UpdateSubEventBodyInterface
   extends Partial<SubEventContentInterface> {
   name?: string
+  /**
+   * Values of the event's `subEventDetails` extended fields (AIRLST-5842). Each value is
+   * checked against its field definition; an unknown key responds 422. On `update()` the
+   * values merge into the stored ones, and a key with null clears that one value.
+   */
+  extended_fields?: Record<string, unknown>
   /**
    * ISO 8601 with offset. The API stores the UTC instant.
    */
