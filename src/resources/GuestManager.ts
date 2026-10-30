@@ -166,7 +166,7 @@ export const GuestManager = class {
    * guest, EVERY participation of the call is created as `waitlisted`.
    *
    * `mandatory` (AIRLST-5842, default false) makes every participation of the call
-   * mandatory: `confirmed` without an RSVP (`planned` while the sub-event is in planning),
+   * mandatory: `confirmed` without an RSVP (`listed` while the sub-event is listing),
    * never waitlisted, also on a full quota, and the guest cannot answer it. A mandatory
    * participation does not change the guest's status on the parent event.
    */
@@ -217,7 +217,7 @@ export const GuestManager = class {
    * waitlisted on all of its sub-events, while the rest of the call still books normally.
    *
    * `mandatory` (AIRLST-5842, default false) makes every participation of the call
-   * mandatory: `confirmed` without an RSVP (`planned` while the sub-event is in planning),
+   * mandatory: `confirmed` without an RSVP (`listed` while the sub-event is listing),
    * never waitlisted, also on a full quota, and the guest cannot answer it. A mandatory
    * participation does not change the guest's status on the parent event.
    */
@@ -279,14 +279,14 @@ export const GuestManager = class {
    * longer — a warning only, the promotion is never blocked. The promoted row has left the
    * waitlist, so its `waitlist_cause` and `queue_position` read null.
    *
-   * While the sub-event is in planning (AIRLST-5842), the only target status is
-   * `planned`; `invited` and `confirmed` respond 422. After its invitations are sent,
-   * `planned` responds 422.
+   * While the sub-event lists new assignments (AIRLST-5842, `default_assignment_status`
+   * `listed`), the only target status is `listed`; `invited` and `confirmed` respond 422.
+   * While it invites, `listed` responds 422.
    */
   public async promoteSubEventParticipation(
     guestManagerId: string,
     participationId: string,
-    status: 'planned' | 'invited' | 'confirmed',
+    status: 'listed' | 'invited' | 'confirmed',
   ): Promise<PromoteSubEventParticipationResponseInterface> {
     return await Api.sendRequest(
       `/events/${this.eventId}/guest-managers/${guestManagerId}/participations/${participationId}/promote`,

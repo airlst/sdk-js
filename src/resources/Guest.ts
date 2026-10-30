@@ -162,7 +162,7 @@ export const Guest = class {
    * the guest can be promoted one participation at a time later.
    *
    * `mandatory` (AIRLST-5842, default false) makes every participation of the call
-   * mandatory: `confirmed` without an RSVP (`planned` while the sub-event is in planning),
+   * mandatory: `confirmed` without an RSVP (`listed` while the sub-event is listing),
    * never waitlisted, also on a full quota, and the guest cannot answer it. A mandatory
    * participation does not change the guest's status on the parent event.
    */
@@ -287,12 +287,13 @@ export const Guest = class {
    *
    * - Only a sub-event with `registration_mode: 'open'`; an `invitation_only` one responds
    *   422 and stays with `assignSubEvents()`.
-   * - A sub-event in planning, or of another event, responds 404: the guest does not see it.
+   * - A sub-event whose first invitations are not sent, one where the guest's own row is
+   *   `listed`, or one of another event responds 404: the guest does not see it.
    * - While a seat is free the guest is `confirmed` at once. When a quota row or the
    *   sub-event's `capacity` is full, the guest is `waitlisted`, and `waitlist_cause` says
    *   which one (`capacity` for the overall cap).
    * - After the sub-event's `response_deadline_at` the booking responds 422.
-   * - An active participation (`planned`, `invited`, `confirmed`, `waitlisted`) responds 422:
+   * - An active participation (`listed`, `invited`, `confirmed`, `waitlisted`) responds 422:
    *   answer it with `updateSubEventParticipation()` instead. A `cancelled` or `declined`
    *   participation is booked again (the same row).
    * - A guest who is `cancelled` or `declined` on the parent event responds 422.

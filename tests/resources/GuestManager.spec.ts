@@ -491,18 +491,18 @@ test('promoteSubEventParticipation()', async () => {
   )
 })
 
-test('promoteSubEventParticipation() to planned while the sub-event is in planning', async () => {
+test('promoteSubEventParticipation() to listed while the sub-event is listing', async () => {
   guestManager.promoteSubEventParticipation(
     'guest-manager-uuid',
     'participation-uuid',
-    'planned',
+    'listed',
   )
 
   expect(apiMock).toHaveBeenCalledWith(
     '/events/event-uuid/guest-managers/guest-manager-uuid/participations/participation-uuid/promote',
     {
       method: 'post',
-      body: JSON.stringify({ status: 'planned' }),
+      body: JSON.stringify({ status: 'listed' }),
     },
   )
 })

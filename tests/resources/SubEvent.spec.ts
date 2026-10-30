@@ -289,7 +289,7 @@ test('deleteImage()', async () => {
 
 test('sendInvitations()', async () => {
   apiMock.mockResolvedValueOnce({
-    data: { sub_event_id: 'sub-event-uuid', planned_count: 143 },
+    data: { sub_event_id: 'sub-event-uuid', listed_count: 143 },
   })
 
   const result = await subEvent.sendInvitations('sub-event-uuid')
@@ -298,12 +298,12 @@ test('sendInvitations()', async () => {
     '/events/event-uuid/sub-events/sub-event-uuid/send-invitations',
     { method: 'post', body: JSON.stringify({}) },
   )
-  expect(result.planned_count).toBe(143)
+  expect(result.listed_count).toBe(143)
 })
 
 test('sendInvitations() without emails', async () => {
   apiMock.mockResolvedValueOnce({
-    data: { sub_event_id: 'sub-event-uuid', planned_count: 0 },
+    data: { sub_event_id: 'sub-event-uuid', listed_count: 0 },
   })
 
   await subEvent.sendInvitations('sub-event-uuid', false)
@@ -314,16 +314,22 @@ test('sendInvitations() without emails', async () => {
   )
 })
 
-test('create() starts a sub-event in planning', async () => {
+test('create() starts a sub-event that lists new assignments', async () => {
   apiMock.mockResolvedValueOnce({
-    data: { sub_event: { id: 'sub-event-uuid', invitations_sent_at: null } },
+    data: {
+      sub_event: {
+        id: 'sub-event-uuid',
+        default_assignment_status: 'listed',
+        invitations_sent_at: null,
+      },
+    },
   })
 
   const body = {
     name: 'Deep Dive',
     starts_at: '2027-05-03T09:00:00+02:00',
     ends_at: '2027-05-03T11:00:00+02:00',
-    plan_before_invitation: true,
+    default_assignment_status: 'listed' as const,
   }
 
   const created = await subEvent.create(body)
@@ -332,7 +338,33 @@ test('create() starts a sub-event in planning', async () => {
     method: 'post',
     body: JSON.stringify(body),
   })
+  expect(created.default_assignment_status).toBe('listed')
   expect(created.invitations_sent_at).toBeNull()
+})
+
+test('update() lists the next wave after a send', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_event: {
+        id: 'sub-event-uuid',
+        default_assignment_status: 'listed',
+        invitations_sent_at: '2027-04-01T08:00:00.000000Z',
+      },
+    },
+  })
+
+  const updated = await subEvent.update('sub-event-uuid', {
+    default_assignment_status: 'listed',
+  })
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid',
+    {
+      method: 'patch',
+      body: JSON.stringify({ default_assignment_status: 'listed' }),
+    },
+  )
+  expect(updated.default_assignment_status).toBe('listed')
 })
 
 test('updateParticipation() cancels a participation', async () => {
@@ -364,37 +396,45 @@ test('updateParticipation() cancels a participation', async () => {
   expect(data.guest.status).toBe('cancelled')
 })
 
-test('syncQuotas() sends a mandatory guest-group row', async () => {
+test('create() sends an assignment rule', async () => {
+  const assignmentRule = {
+    type: 'group' as const,
+    logicalOperator: 'and' as const,
+    items: [
+      {
+        type: 'item' as const,
+        operand: 'guest.guest_group_id',
+        operator: 'equal' as const,
+        data_type: 'uuid',
+        matching_value: 'market-uk-uuid',
+      },
+    ],
+  }
   apiMock.mockResolvedValueOnce({
     data: {
       sub_event: {
         id: 'sub-event-uuid',
-        quotas: [
-          {
-            id: 'quota-uuid',
-            guest_group_id: 'market-a-uuid',
-            guest_manager_id: null,
-            guest_manager_name: null,
-            limit: 12,
-            used: 12,
-            mandatory: true,
-          },
-        ],
+        assignment_rule: assignmentRule,
+        assignment_mode: 'mandatory',
       },
     },
   })
+  const body = {
+    name: 'Partner Summit UK',
+    starts_at: '2027-05-03T09:00:00+02:00',
+    ends_at: '2027-05-03T11:00:00+02:00',
+    assignment_rule: assignmentRule,
+    assignment_mode: 'mandatory' as const,
+  }
 
-  const quotas = [
-    { guest_group_id: 'market-a-uuid', limit: 12, mandatory: true },
-  ]
+  const created = await subEvent.create(body)
 
-  const synced = await subEvent.syncQuotas('sub-event-uuid', quotas)
-
-  expect(apiMock).toHaveBeenCalledWith(
-    '/events/event-uuid/sub-events/sub-event-uuid/quotas',
-    { method: 'put', body: JSON.stringify({ quotas }) },
-  )
-  expect(synced.quotas[0].mandatory).toBe(true)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/sub-events', {
+    method: 'post',
+    body: JSON.stringify(body),
+  })
+  expect(created.assignment_mode).toBe('mandatory')
+  expect(created.assignment_rule).toEqual(assignmentRule)
 })
 
 test('create() and update() send the sub-event extended fields', async () => {
