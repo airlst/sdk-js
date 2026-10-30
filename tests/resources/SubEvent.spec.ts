@@ -396,35 +396,43 @@ test('updateParticipation() cancels a participation', async () => {
   expect(data.guest.status).toBe('cancelled')
 })
 
-test('syncQuotas() sends a mandatory guest-group row', async () => {
+test('create() sends an assignment rule', async () => {
+  const assignmentRule = {
+    type: 'group' as const,
+    logicalOperator: 'and' as const,
+    items: [
+      {
+        type: 'item' as const,
+        operand: 'guest.guest_group_id',
+        operator: 'equal' as const,
+        data_type: 'uuid',
+        matching_value: 'market-uk-uuid',
+      },
+    ],
+  }
   apiMock.mockResolvedValueOnce({
     data: {
       sub_event: {
         id: 'sub-event-uuid',
-        quotas: [
-          {
-            id: 'quota-uuid',
-            guest_group_id: 'market-a-uuid',
-            guest_manager_id: null,
-            guest_manager_name: null,
-            limit: 12,
-            used: 12,
-            mandatory: true,
-          },
-        ],
+        assignment_rule: assignmentRule,
+        assignment_mode: 'mandatory',
       },
     },
   })
+  const body = {
+    name: 'Partner Summit UK',
+    starts_at: '2027-05-03T09:00:00+02:00',
+    ends_at: '2027-05-03T11:00:00+02:00',
+    assignment_rule: assignmentRule,
+    assignment_mode: 'mandatory' as const,
+  }
 
-  const quotas = [
-    { guest_group_id: 'market-a-uuid', limit: 12, mandatory: true },
-  ]
+  const created = await subEvent.create(body)
 
-  const synced = await subEvent.syncQuotas('sub-event-uuid', quotas)
-
-  expect(apiMock).toHaveBeenCalledWith(
-    '/events/event-uuid/sub-events/sub-event-uuid/quotas',
-    { method: 'put', body: JSON.stringify({ quotas }) },
-  )
-  expect(synced.quotas[0].mandatory).toBe(true)
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/sub-events', {
+    method: 'post',
+    body: JSON.stringify(body),
+  })
+  expect(created.assignment_mode).toBe('mandatory')
+  expect(created.assignment_rule).toEqual(assignmentRule)
 })

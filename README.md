@@ -143,11 +143,36 @@ the matrix holds at most one row per dimension. Guest groups and guest managers 
 the event. A kept row keeps its `id`; an empty array clears the matrix. It resolves to the
 sub-event with the quota state of every row.
 
-`mandatory: true` on a guest-group row (AIRLST-5842) makes the sub-event mandatory for the whole
-market: every guest of the group, also guests added later, is assigned on the queue as a
-confirmed mandatory participation. A guest who was cancelled out of the sub-event or declined it
-is not added back, and no email goes out. Only a guest-group row can be mandatory: on a
-guest-manager or default row the API responds **422**. Each quota row reports `mandatory`.
+A quota row has no `mandatory` flag (removed in AIRLST-5842 F2; the API responds **422**). The
+automatic assignment of a market is the sub-event's assignment rule, see below.
+
+#### Assignment rule of a sub-event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+await new SubEvent('event-uuid').update('sub-event-uuid', {
+  assignment_mode: 'mandatory', // or 'invite'
+  assignment_rule: {
+    type: 'group',
+    logicalOperator: 'and',
+    items: [
+      { type: 'item', operand: 'guest.guest_group_id', operator: 'equal', data_type: 'uuid', matching_value: 'market-uk-uuid' },
+      { type: 'item', operand: 'guest.extended_fields->summit', operator: 'equal', data_type: 'string', matching_value: 'partner' },
+    ],
+  },
+})
+```
+
+One rule per sub-event (AIRLST-5842 F2) assigns every guest it selects, also guests who match
+later: `mandatory` as a confirmed mandatory participation, `invite` as an ordinary invitation,
+both `listed` while the sub-event lists. Items are guest fields (`guest.status`,
+`guest.guest_group_id`, `guest.extended_fields->KEY`, `booking.extended_fields->KEY`,
+`contact.*`) with `equal`, `not_equal`, `empty` or `not_empty`; groups nest with `and`/`or`. A
+rule needs at least one condition and every comparison a value (**422** otherwise). The rule
+never re-adds a cancelled or declined guest and leaves manual participations alone. A guest who
+no longer matches keeps the participation, which reports `rule_mismatch_at`; rows the rule
+created report `assigned_by_rule_at`. Send both fields as `null` to remove the rule.
 
 Each sub-event also reports `image_url` (AIRLST-5842), `null` without an image.
 

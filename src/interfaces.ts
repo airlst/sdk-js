@@ -60,6 +60,38 @@ export interface SubEventContentInterface {
   dress_code: string | null
 }
 
+/**
+ * One condition of an assignment rule (AIRLST-5842 F2): a report filter item. Operands are the
+ * guest fields (`guest.status`, `guest.guest_group_id`, `guest.extended_fields->KEY`,
+ * `booking.extended_fields->KEY`, `contact.*`). `equal` and `not_equal` need a value.
+ */
+export interface SubEventAssignmentRuleItemInterface {
+  type: 'item'
+  operand: string
+  operator: 'equal' | 'not_equal' | 'empty' | 'not_empty'
+  /** `boolean` and `multiselect_enum` extended fields must say so; otherwise `string`. */
+  data_type: string
+  matching_value: string | number | boolean | null
+}
+
+/**
+ * The assignment rule of a sub-event (AIRLST-5842 F2): an AND/OR tree over the guests of the
+ * parent event. It must name at least one condition.
+ */
+export interface SubEventAssignmentRuleInterface {
+  type: 'group'
+  logicalOperator: 'and' | 'or'
+  items: Array<
+    SubEventAssignmentRuleItemInterface | SubEventAssignmentRuleInterface
+  >
+}
+
+/**
+ * `mandatory`: a confirmed mandatory participation; `invite`: an ordinary invitation. Both are
+ * `listed` while the sub-event lists.
+ */
+export type SubEventAssignmentMode = 'mandatory' | 'invite'
+
 export interface SubEventInterface extends SubEventContentInterface {
   id: string
   name: string
@@ -104,6 +136,12 @@ export interface SubEventInterface extends SubEventContentInterface {
    * waitlisted with cause `capacity`. Null: no overall cap.
    */
   capacity: number | null
+  /**
+   * The automatic assignment (AIRLST-5842 F2): every guest the rule selects is assigned in
+   * `assignment_mode`, also guests who match later. Both null without a rule.
+   */
+  assignment_rule: SubEventAssignmentRuleInterface | null
+  assignment_mode: SubEventAssignmentMode | null
   /**
    * Occupying participations only — statuses `listed`, `invited` and `confirmed`
    * (AIRLST-5445, `listed` since AIRLST-5842).
@@ -254,12 +292,6 @@ export interface SubEventQuotaInterface {
   guest_manager_name: string | null
   limit: number
   used: number
-  /**
-   * "Mandatory for the whole market" (AIRLST-5842): on a guest-group row, every guest of the
-   * group, also guests added later, is assigned automatically as a confirmed mandatory
-   * participation. Always false on guest-manager and default rows.
-   */
-  mandatory: boolean
 }
 
 /**
@@ -274,15 +306,6 @@ export interface SubEventQuotaBodyInterface {
    * 0 to 2 147 483 647.
    */
   limit: number
-  /**
-   * "Mandatory for the whole market" (AIRLST-5842). Only on a guest-group row: on a
-   * guest-manager or default row the API responds 422 on `quotas.{index}.mandatory`.
-   * Every guest of the group, also guests added later, is assigned on the queue as a
-   * confirmed mandatory participation (`listed` while the sub-event is listing). A
-   * guest who was cancelled out of the sub-event or declined it is not added back. No
-   * email. Defaults to false.
-   */
-  mandatory?: boolean
 }
 
 /**
@@ -317,6 +340,12 @@ export interface UpdateSubEventBodyInterface
    * The overall seat count (0 to 2147483647); null removes the cap. See `SubEventInterface`.
    */
   capacity?: number | null
+  /**
+   * Set both, or both null to remove the rule (422 otherwise). An update that sends only one
+   * keeps the stored other. See `SubEventInterface`.
+   */
+  assignment_rule?: SubEventAssignmentRuleInterface | null
+  assignment_mode?: SubEventAssignmentMode | null
   /**
    * The status of a new assignment (AIRLST-5842). Default `invited` on create. Set it back
    * to `listed` after a send to list the next wave. `invited` responds 422 on update while
@@ -427,6 +456,10 @@ export interface SubEventParticipationInterface {
    * null for rows assigned by an integrator, a guest manager or an admin. Read-only.
    */
   booked_by_guest_at: string | null
+  /** When the sub-event's assignment rule created the row (AIRLST-5842 F2); null otherwise and after a re-add. */
+  assigned_by_rule_at: string | null
+  /** Since when the guest of a rule row no longer matches the rule; null while it matches. The row stays. */
+  rule_mismatch_at: string | null
   /**
    * A mandatory participation (AIRLST-5842): confirmed without an RSVP, never waitlisted,
    * and the guest cannot answer it. It does not change the guest's status on the parent
