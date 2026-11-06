@@ -470,3 +470,40 @@ test('create() and update() send the sub-event extended fields', async () => {
     },
   )
 })
+
+test('create() switches the waitlist off (AIRLST-5842 F4)', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { sub_event: { id: 'sub-event-uuid', waitlist_enabled: false } },
+  })
+
+  const body = {
+    name: 'Wave 1',
+    starts_at: '2027-03-01T09:00:00+01:00',
+    ends_at: '2027-03-01T17:00:00+01:00',
+    waitlist_enabled: false,
+  }
+
+  const created = await subEvent.create(body)
+
+  expect(apiMock).toHaveBeenCalledWith('/events/event-uuid/sub-events', {
+    method: 'post',
+    body: JSON.stringify(body),
+  })
+  expect(created.waitlist_enabled).toBe(false)
+})
+
+test('update() switches the waitlist back on (AIRLST-5842 F4)', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: { sub_event: { id: 'sub-event-uuid', waitlist_enabled: true } },
+  })
+
+  const updated = await subEvent.update('sub-event-uuid', {
+    waitlist_enabled: true,
+  })
+
+  expect(apiMock).toHaveBeenCalledWith(
+    '/events/event-uuid/sub-events/sub-event-uuid',
+    { method: 'patch', body: JSON.stringify({ waitlist_enabled: true }) },
+  )
+  expect(updated.waitlist_enabled).toBe(true)
+})

@@ -135,8 +135,10 @@ export const Guest = class {
 
   /**
    * Assigns the guest to sub-events of the event in one transaction (AIRLST-5445).
-   * A full sub-event yields a `waitlisted` participation instead of `invited`; any
-   * error rolls back the whole batch. Requires the company's `sub-events` module,
+   * A full sub-event yields a `waitlisted` participation instead of `invited`; a full
+   * sub-event with `waitlist_enabled: false` (AIRLST-5842 F4) responds 422 on
+   * `sub_event_ids.{index}` ("fully booked") instead. Any error rolls back the whole
+   * batch. Requires the company's `sub-events` module,
    * otherwise the API responds 400.
    *
    * `extendedFields` (AIRLST-5446) carries optional participation extended-field
@@ -196,7 +198,8 @@ export const Guest = class {
    * Sorted by start date. `participation` is null while the guest is not assigned;
    * `has_free_seat` answers for exactly this guest — `false` means a confirm or a new
    * assignment would be waitlisted, so a registration form should say so before the
-   * guest answers. Requires the company's `sub-events` module, otherwise the API
+   * guest answers. With `waitlist_enabled: false` (AIRLST-5842 F4) it means "fully booked"
+   * instead: an assignment responds 422. Requires the company's `sub-events` module, otherwise the API
    * responds 400.
    */
   public async listSubEvents(
@@ -291,7 +294,8 @@ export const Guest = class {
    *   `listed`, or one of another event responds 404: the guest does not see it.
    * - While a seat is free the guest is `confirmed` at once. When a quota row or the
    *   sub-event's `capacity` is full, the guest is `waitlisted`, and `waitlist_cause` says
-   *   which one (`capacity` for the overall cap).
+   *   which one (`capacity` for the overall cap). With `waitlist_enabled: false`
+   *   (AIRLST-5842 F4) the booking responds 422 ("fully booked") instead.
    * - After the sub-event's `response_deadline_at` the booking responds 422.
    * - An active participation (`listed`, `invited`, `confirmed`, `waitlisted`) responds 422:
    *   answer it with `updateSubEventParticipation()` instead. A `cancelled` or `declined`

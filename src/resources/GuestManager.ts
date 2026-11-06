@@ -159,7 +159,9 @@ export const GuestManager = class {
    * must be assigned to `guestManagerId` (403 otherwise), and every sub-event must
    * be released (422 on the offending `sub_event_ids.{index}` key, and the whole
    * batch is refused). An exhausted quota waitlists the participation; it is never
-   * a hard rejection.
+   * a hard rejection, except on a sub-event with `waitlist_enabled: false`
+   * (AIRLST-5842 F4): there it responds 422 on `sub_event_ids.{index}` ("fully booked")
+   * and writes nothing.
    *
    * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) behaves exactly as on
    * `Guest.assignSubEvents()`: when ANY requested sub-event has no free seat for this
@@ -215,6 +217,9 @@ export const GuestManager = class {
    * `waitlistAllSubeventsOnLimit` (AIRLST-5578, default false) is evaluated PER GUEST,
    * inside that guest's own transaction: a guest whose batch meets an exhausted quota is
    * waitlisted on all of its sub-events, while the rest of the call still books normally.
+   *
+   * A guest refused because a sub-event without a waitlist is full (AIRLST-5842 F4) gets
+   * `participations: []` and `error: "This SubEvent is fully booked."` in its entry.
    *
    * `mandatory` (AIRLST-5842, default false) makes every participation of the call
    * mandatory: `confirmed` without an RSVP (`listed` while the sub-event is listing),

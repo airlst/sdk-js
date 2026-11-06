@@ -249,6 +249,27 @@ again. `update()` with `invited` responds **422** while `invitations_sent_at` is
 The status `listed` was `planned`, and `default_assignment_status` replaced
 `plan_before_invitation` (AIRLST-5842 F3). The API no longer accepts the old names.
 
+#### Switch the waitlist off for a sub-event
+
+```javascript
+import { SubEvent } from '@airlst/sdk'
+
+await new SubEvent('event-uuid').update('sub-event-uuid', { waitlist_enabled: false })
+```
+
+`waitlist_enabled` (AIRLST-5842 F4) is `true` by default, also for every existing sub-event.
+With `false`, an assignment that gets no free seat responds **422** on `sub_event_ids.{index}`
+("This SubEvent is fully booked.") instead of a `waitlisted` row, and writes nothing. That holds
+whichever constraint is full (a guest-group row, a guest-manager row, the default row or the
+`capacity`), and on every key-API path: `Guest.assignSubEvents()`,
+`GuestManager.assignGuestSubEvents()`, the guest import and `Guest.bookSubEvent()` (on
+`sub_event`). `GuestManager.assignGuestsSubEvents()` reports the refused guest in its own entry. With
+`waitlistAllSubeventsOnLimit`, a call that would waitlist any sub-event without a waitlist is
+refused. Admin overbooking in the Suite, `mandatory` assignments and the assignment rule are not
+refused. Rows that are already `waitlisted` stay and can still be promoted. Every sub-event
+response carries `waitlist_enabled`, also `Guest.listSubEvents()`, where `has_free_seat: false`
+then means "fully booked".
+
 #### Cancel or update a participation as the integrator
 
 ```javascript

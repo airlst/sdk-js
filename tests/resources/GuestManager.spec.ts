@@ -587,3 +587,39 @@ test('assignGuestsSubEvents() sends the mandatory flag', async () => {
     },
   )
 })
+
+test('assignGuestsSubEvents() reports a fully booked guest without a waitlist (AIRLST-5842 F4)', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      results: [
+        {
+          guest_code: 'guest-code-1',
+          participations: [],
+          overlap_warnings: [],
+          error: 'This SubEvent is fully booked.',
+        },
+      ],
+    },
+  })
+
+  const { data } = await guestManager.assignGuestsSubEvents(
+    'guest-manager-uuid',
+    ['guest-code-1'],
+    ['sub-event-uuid-1'],
+  )
+
+  expect(data.results[0].participations).toHaveLength(0)
+  expect(data.results[0].error).toBe('This SubEvent is fully booked.')
+})
+
+test('listSubEvents() reports whether the sub-event has a waitlist (AIRLST-5842 F4)', async () => {
+  apiMock.mockResolvedValueOnce({
+    data: {
+      sub_events: [{ id: 'sub-event-uuid', waitlist_enabled: false }],
+    },
+  })
+
+  const subEvents = await guestManager.listSubEvents('guest-manager-uuid')
+
+  expect(subEvents[0]?.waitlist_enabled).toBe(false)
+})

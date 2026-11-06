@@ -111,6 +111,12 @@ export interface SubEventInterface extends SubEventContentInterface {
    */
   send_status_emails: boolean
   /**
+   * Whether a full sub-event waitlists a new assignment (AIRLST-5842 F4). `false`: an
+   * assignment without a free seat responds 422 ("fully booked") on every key-API path and
+   * writes nothing. `true` (the default) waitlists as before.
+   */
+  waitlist_enabled: boolean
+  /**
    * After this moment a guest can no longer confirm, promote or self-book on the guest
    * endpoints (AIRLST-5842); a decline stays possible. Null means no deadline.
    */
@@ -171,7 +177,8 @@ export interface SubEventInterface extends SubEventContentInterface {
  * Returned by `Guest.listSubEvents()`. `participation` is null while the guest is not
  * assigned. `has_free_seat` is computed for exactly that guest — quota rows are scoped
  * to guest groups and guest managers, so whether a sub-event is "full" depends on the
- * guest. `false` means a confirm or a new assignment for this guest would be waitlisted.
+ * guest. `false` means a confirm or a new assignment for this guest would be waitlisted,
+ * or is refused as "fully booked" when `waitlist_enabled` is `false` (AIRLST-5842 F4).
  */
 export interface GuestSubEventInterface {
   id: string
@@ -196,6 +203,11 @@ export interface GuestSubEventInterface {
   extended_fields: Record<string, unknown>
   participation: SubEventParticipationInterface | null
   has_free_seat: boolean
+  /**
+   * `false`: the sub-event has no waitlist (AIRLST-5842 F4), so `has_free_seat: false` means
+   * "fully booked". `true`: "you will be waitlisted".
+   */
+  waitlist_enabled: boolean
 }
 
 /**
@@ -226,6 +238,11 @@ export interface GuestManagerSubEventContingentInterface
    * The status the manager's next assignment gets (AIRLST-5842): `listed` or `invited`.
    */
   default_assignment_status: SubEventDefaultAssignmentStatus
+  /**
+   * `false`: a booking without a free seat responds 422 ("fully booked") instead of a
+   * `waitlisted` row (AIRLST-5842 F4).
+   */
+  waitlist_enabled: boolean
   /**
    * The URL of the sub-event image (AIRLST-5842); null without one.
    */
@@ -348,6 +365,11 @@ export interface UpdateSubEventBodyInterface
    */
   released?: boolean
   send_status_emails?: boolean
+  /**
+   * Default `true` on create. `false` refuses an assignment without a free seat with 422.
+   * Rows that are already waitlisted stay. See `SubEventInterface`.
+   */
+  waitlist_enabled?: boolean
   /**
    * ISO 8601 with offset; null clears the deadline. See `SubEventInterface`.
    */
